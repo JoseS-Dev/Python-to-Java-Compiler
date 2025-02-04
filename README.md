@@ -10,3 +10,9 @@ Additionally, they allow programmers to write programs in more readable and main
 
 -**Semantic analysis**: It verifies that program instructions are semantically correct and consistent, and performs checks such as type assignment and name resolution.
 
+-**Intermediate code generation**: This represents the program in a more abstract way and can be optimized before generating the object code.
+
+-**Machine code generation**: Creates an executable block of machine code, as well as the necessary blocks intended to contain the data.
+
+-**Phase of optimization**: The optimization can be carried out on the intermediate code (independently of the specific characteristics of the microprocessor), on the machine code, or on both, and it can be isolated from the previous two, or be integrated with them.
+
