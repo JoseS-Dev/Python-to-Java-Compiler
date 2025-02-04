@@ -17,7 +17,7 @@ Additionally, they allow programmers to write programs in more readable and main
 -**Phase of optimization**: The optimization can be carried out on the intermediate code (independently of the specific characteristics of the microprocessor), on the machine code, or on both, and it can be isolated from the previous two, or be integrated with them.
 
 <div align="Center" width=100%>
-  <img src="https://ricardogeek.com/wp-content/uploads/2016/12/compilers_phases.png" alt="Diagrama" width=100% height=10%>
+  <img src="https://curso-automatas.angelfire.com/Semana3_archivos/image002.gif" alt="Diagrama" width=100% height=10%>
 </div>
 
 ## Objetive
