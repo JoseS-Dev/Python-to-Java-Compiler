@@ -24,8 +24,7 @@ Additionally, they allow programmers to write programs in more readable and main
 The objectives of this python to java compiler is that the python language can translate java code
 
 <div align = "Center" width=100%>
-  <img src="https://i.postimg.cc/QCq38WR1/python-18894.png" alt="Python" width=30%>
-  <span align="Center">=></span>
-  <img src="https://i.postimg.cc/6QDwYKr2/java.png" alt="Java" width=30%>
+  <img src="https://i.postimg.cc/QCq38WR1/python-18894.png" alt="Python" width=20%>
+  <img src="https://i.postimg.cc/6QDwYKr2/java.png" alt="Java" width=20%>
 </div>
 
