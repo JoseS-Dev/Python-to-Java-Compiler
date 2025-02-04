@@ -66,3 +66,25 @@ tokens = ['INT_NUMBER','FLOAT_NUMBER','BYTE_NUMBER','DOUBLE_NUMBER',
 'LT','GT','LEQ','GEQ','AND','OR','NOT','LSHIFT_EQ','RSHIFT_EQ','URSHIFT_EQ','ID','RBRACKET',
 'LBRACKET','HEXA_NUMBER','OCTAL_NUMBER','BIN_NUMBER','INCREMENT','DECREMENT','TERNARY','MODULE'
 ]
+
+Toke = tokens + list(reservados)
+
+#Expresiones regulares para los tokens
+t_URSHIFT_EQ = r'>>>='
+t_LSHIFT_EQ = r'<<='
+t_RSHIFT_EQ = r'>>='
+t_URSHIFT = r'>>>'
+t_LSHIFT = r'<<'
+t_RSHIFT = r'>>'
+t_LEQ = r'<='
+t_GEQ = r'>='
+t_AND = r'&&'
+t_OR = r'\|\|'
+t_INCREMENT = r'\+\+'
+t_DECREMENT = r'--'
+t_PLUS_EQ = r'\+='
+t_MINUS_EQ = r'-='
+t_TIMES_EQ = r'\*='
+t_DIVIDE_EQ = r'/='
+t_MOD_EQ = r'%='
+t_MODULE = r'%'
