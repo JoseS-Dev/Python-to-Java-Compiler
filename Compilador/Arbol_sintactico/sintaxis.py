@@ -770,3 +770,185 @@ class OperatorBitToBit(Operator):
     
     def access(self, visitor):
         return visitor.VisitOperatorBitToBit(self)
+
+### Definicion de la clase unaryoperatorprefx
+class UnaryOperatorPrefx(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class UnaryOperatorPrefixConcrete(UnaryOperatorPrefx):
+    def __init__(self, unaryoperatorprefx):
+        self.unaryoperatorprefx = unaryoperatorprefx
+    
+    def access(self, visitor):
+        return visitor.VisitUnaryOperatorPrefixConcrete(self)
+
+### Definicion de la clase unaryoperatorsufix
+class UnaryOperatorSufix(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class UnaryOperatorSufixConcrete(UnaryOperatorSufix):
+    def __init__(self, unaryoperatorsufix):
+        self.unaryoperatorsufix = unaryoperatorsufix
+    
+    def access(self, visitor):
+        return visitor.VisitUnaryOperatorSufixConcrete(self)
+
+### Definicion de la clase unaryoperadorbittobit
+class UnaryOperatorBitToBit(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class UnaryOperatorBitToBitConcrete(UnaryOperatorBitToBit):
+    def __init__(self, unaryoperatorbit):
+        self.unaryoperatorbit = unaryoperatorbit
+    
+    def access(self, visitor):
+        return visitor.VisitUnaryOperatorBitToBitConcrete(self)
+
+### Definicion de la clase BracketExpression
+class BracketsExpression(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class BracketsExpressionSimple(BracketsExpression):
+    def __init__(self, brackets_default):
+        self.brackets_default = brackets_default
+    
+    def access(self, visitor):
+        return visitor.VisitBracketsExpressionSimple(self)
+          
+class BracketsExpressionIntNumber(BracketsExpression):
+    def __init__(self, int_number):
+        self.int_number = int_number
+    
+    def access(self, visitor):
+        return visitor.VisitBracketsExpressionIntNumber(self)
+    
+class BracketsExpressionId(BracketsExpression):
+    def __init__(self, ID):
+        self.ID = ID
+    
+    def access(self, visitor):
+        return visitor.VisitBracketsExpressionId(self)
+
+### Definicion de la clase Tipo
+class Type(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class TypePrimitive(Type):
+    def __init__(self, primitivetypes):
+        self.primitivetypes = primitivetypes
+    
+    def access(self, visitor):
+        return visitor.VisitTypePrimitive(self)
+
+### Definicion de la clase TipoPrimitivo
+class PrimitiveType(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class PrimitiveTypesConcrete(PrimitiveType):
+    def __init__(self, primitivetypes):
+        self.primitivetypes = primitivetypes
+    
+    def access(self, visitor):
+        return visitor.VisitPrimitiveTypesConcrete(self)
+
+### Definicion de la clase Call
+class Call(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class CallParams(Call):
+    def __init__(self,ID , callparams):
+        self.ID = ID
+        self.callparams = callparams
+    
+    def access(self, visitor):
+        return visitor.VisitCallParams(self)
+
+class CallDefault(Call):
+    def __init__(self, ID):
+        self.ID = ID
+    
+    def access(self, visitor):
+        return visitor.VisitCallDefault(self)
+
+### Definicion de la clase CallParams
+class CallParams(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class ParamsCallMulti(CallParams):
+    def __init__(self, expression, params_call):
+        self.expression = expression
+        self.params_call = params_call
+    
+    def access(self, visitor):
+        return visitor.VisitParamsCallMulti(self)
+    
+class ParamsCallUnique(CallParams):
+    def __init__(self, expression):
+        self.expression = expression
+    
+    def access(self, visitor):
+        return visitor.VisitParamsCallUnique(self)
+
+### Definicion de la clase expresionesCHAVE
+class ChavExp(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class ChavExpEmpty(ChavExp):
+    def __init__(self):
+        pass
+    
+    def access(self, visitor):
+        return visitor.VisitChavExpEmpty(self)
+    
+class ChavExpExpressionChav(ChavExp):
+    def __init__(self, expression_chav):
+        self.expression_chav = expression_chav
+    
+    def access(self, visitor):
+        return visitor.VisitChavExpExpressionChav(self)
+
+### Definicion de la clase expresionesCHAV
+class ExpressionChav(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self, visitor):
+        pass
+    
+class ExpressionChavMult(ExpressionChav):
+    def __init__(self, expression, expression_chav):
+        self.expression = expression
+        self.expression_chav = expression_chav
+    
+    def access(self, visitor):
+        return visitor.VisitExpressionChavMult(self)
+    
+class ExpressionChavUni(ExpressionChav):
+    def __init__(self, expression):
+        self.expression = expression
+    
+    def access(self, visitor):
+        return visitor.VisitExpressionChavUni(self)
+    
+class ExpressionChavComma(ExpressionChav):
+    def __init__(self, expression):
+        self.expression = expression
+    
+    def access(self, visitor):
+        return visitor.VisitExpressionChavComma(self)
