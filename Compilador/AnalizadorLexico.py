@@ -195,4 +195,5 @@ def main():
     except FileNotFoundError:
         print("El archivo no se pudo encontrar.")
 
-main()
+if __name__ == '__main__':
+    main()
