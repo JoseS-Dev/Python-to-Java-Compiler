@@ -98,4 +98,76 @@ class MembersMult(Members):
         return visitor.VisitMembersMult(self)
 
 ### Definicion de la clase Miembro
+class Member(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class MemberAtribute(Member):
+    def __init__(self,atribute):
+        self.atribute = atribute
+    
+    def access(self, visitor):
+        return visitor.VisitMemberAtribute(self)
+
+class MemberFunction(Member):
+    def __init__(self, function):
+        self.function = function
+    
+    def access(self, visitor):
+        return visitor.VisitMemberFunction(self)
+
+### Definicion de la clase Atributo
+class Atribute(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class AtributeDefault(Atribute):
+    def __init__(self,visibility, atributemodifier, type, ID):
+        self.visibility = visibility
+        self.atributemodifier = atributemodifier
+        self.type = type
+        self.ID = ID
+    
+    def access(self,visitor):
+        return visitor.VisitAtributeDefault(self)
+
+class AtributeDefaultInicializedType(Atribute):
+    def __init__(self, visibility, atributemodifier, type, ID, expression):
+        self.visibility = visibility
+        self.atributemodifier = atributemodifier
+        self.type = type
+        self.ID = ID
+        self.expression = expression
+    
+    def access(self,visitor):
+        return visitor.VisitAtributeDefaultInicializedType(self)
+
+### dEfinicion de la clase AtributoModificador
+class AtributeModifier(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class AtributeModifierConcrete(AtributeModifier):
+    def __init__(self, atributeModifiers):
+        self.atributeModifiers = atributeModifiers
+    
+    def access(self, visitor):
+        return visitor.VisitAtributeModifierConcrete(self)
+
+### Definicion de la clase funcion
+class Function(metaclass=ABCMeta):
+    @abstractmethod
+    def access(self,visitor):
+        pass
+
+class FunctionDefault(Function):
+    def __init__(self, signature, body):
+        self.signature = signature
+        self.body = body
+    
+    def access(self, visitor):
+        return visitor.VisitFunctionDefault(self)
 
