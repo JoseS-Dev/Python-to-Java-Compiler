@@ -855,12 +855,12 @@ class ExpresionDeCorchetesSimple(ExpresionDeCorchetes):
     def aceptar(self, visitante):
         return visitante.visitarExpresionDeCorchetesSimple(self)
           
-class ExpresionDeCorchetesNumeroEntero(ExpresionDeCorchetes):
+class ExpresionDeCorchetesNumeroINT(ExpresionDeCorchetes):
     def __init__(self, numero_entero):
         self.numero_entero = numero_entero
         
     def aceptar(self, visitante):
-        return visitante.visitarExpresionDeCorchetesNumeroEntero(self)
+        return visitante.visitarExpresionDeCorchetesNumeroINT(self)
     
 class ExpresionDeCorchetesId(ExpresionDeCorchetes):
     def __init__(self, ID):
@@ -932,7 +932,7 @@ class ParamsCALLMulti(ParamsCALL):
         return visitante.visitarParamsCALLMulti(self)
 
 # PARAMS LLAMADA ÚNICA
-class ParamsLlamadaUnica(ParamsCALL):
+class ParamsCALLUnica(ParamsCALL):
     def __init__(self, expresion):
         self.expresion = expresion
         

@@ -211,195 +211,195 @@ def p_stm_variable_type_list_expression_inicialized(p):
 
 def p_stm_variable_type_list_list(p):
     '''stm : atributemodifier type LBRACKET RBRACKET ID LBRACKET RBRACKET SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeListList(p[1], p[2], p[5])
+    p[0] = SA.SentenciaExpresionVariableTipoListList(p[1], p[2], p[5])
 
 def p_stm_variable_type_list_list_inicialized(p):
     '''stm : atributemodifier type LBRACKET RBRACKET ID LBRACKET RBRACKET EQUAL chav_exp SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeListListInicialized(p[1], p[2], p[5], p[9])
+    p[0] = SA.SentenciaExpresionVariableTipoListListInicializada(p[1], p[2], p[5], p[9])
 
 def p_stm_return(p):
     '''stm : RETURN expression SEMICOLON'''
-    p[0] = SA.StmExpressionReturn(p[2])
+    p[0] = SA.SentenciaExpresionReturn(p[2])
 
 def p_stm_void_return(p):
     '''stm : RETURN SEMICOLON'''
-    p[0] = SA.StmExpressionVoidReturn(None)
+    p[0] = SA.SentenciaExpresionVoidReturn(None)
 
 ### Cuerpo o sentencia
 def p_bodyorstm_body(p):
     '''bodyorstm : body'''
-    p[0] = SA.BodyOrStmBody(p[1])
+    p[0] = SA.CuerpoOSentenciaCuerpo(p[1])
 
 ### Expresion for
 def p_expression_assign_for_type(p):
     ''' expression_for : type ID EQUAL expression  '''
-    p[0] = SA.ExpressionForAssignForType(p[1], p[2], p[4])
+    p[0] = SA.ExpresionParaAsignarTipo(p[1], p[2], p[4])
 
 def p_expression_assign_for(p):
     ''' expression_for : ID EQUAL expression  '''
-    p[0] = SA.ExpressionForAssignFor(p[1], p[3])
+    p[0] = SA.ExpresionAsignarFOR(p[1], p[3])
 
 ### Expresiones
 def p_expression_operator(p):
     ''' expression : operator '''
-    p[0] = SA.ExpressionOperator(p[1])
+    p[0] = SA.ExpresionOperador(p[1])
 
 def p_expression_call(p):
     ''' expression : call '''
-    p[0] = SA.ExpressionCall(p[1])
+    p[0] = SA.ExpresionCALL(p[1])
 
 def p_expression_FLOAT_NUMBER(p):
     ''' expression : FLOAT_NUMBER '''
-    p[0] = SA.ExpressionFloatNumber(p[1])
+    p[0] = SA.ExpresionNumeroFloat(p[1])
 
 def p_expression_DOUBLE_NUMBER(p):
     ''' expression : DOUBLE_NUMBER '''
-    p[0] = SA.ExpressionDoubleNumber(p[1])
+    p[0] = SA.ExpresionNumeroDouble(p[1])
 
 def p_expression_INT_NUMBER(p):
     ''' expression : INT_NUMBER '''
-    p[0] = SA.ExpressionIntNumber(p[1])
+    p[0] = SA.ExpresionNumeroINT(p[1])
 
 def p_expression_STRING(p):
     ''' expression : STRING '''
-    p[0] = SA.ExpressionString(p[1])
+    p[0] = SA.ExpresionSTRING(p[1])
 
 def p_expression_ID (p):
     ''' expression : ID  '''
-    p[0] = SA.ExpressionId(p[1])
+    p[0] = SA.ExpresionId(p[1])
 
 def p_expression_new(p):
     '''expression : NEW type LPAREN params_call RPAREN '''
-    p[0] = SA.ExpressionNew(p[2], p[4])
+    p[0] = SA.ExpresionNuevo(p[2], p[4])
 
 def p_expression_new_list(p):
     '''expression : NEW type LBRACKET expression RBRACKET '''
-    p[0] = SA.ExpressionNewList(p[2], p[4])
+    p[0] = SA.ExpresionNuevaList(p[2], p[4])
 
 ### Operadores
 def p_operator_arithmetic_times(p):
     '''operator : expression TIMES expression'''
-    p[0] = SA.OperatorArithmeticTimes(p[1], p[3])
+    p[0] = SA.OperadorAritmeticoMultiplicar(p[1], p[3])
 
 def p_operator_arithmetic_divide(p):
     '''operator : expression DIVIDE expression'''
-    p[0] = SA.OperatorArithmeticDivide(p[1], p[3])
+    p[0] = SA.OperadorAritmeticoDividir(p[1], p[3])
 
 def p_operator_arithmetic_module(p):
     '''operator : expression MODULE expression'''
-    p[0] = SA.OperatorArithmeticModule(p[1], p[3])
+    p[0] = SA.OperadorAritmeticoModulo(p[1], p[3])
 
 def p_operator_arithmetic_plus(p):
     '''operator : expression PLUS expression'''
-    p[0] = SA.OperatorArithmeticPlus(p[1], p[3])
+    p[0] = SA.OperadorAritmeticoSumar(p[1], p[3])
 
 def p_operator_arithmetic_minus(p):
     '''operator : expression MINUS expression'''
-    p[0] = SA.OperatorArithmeticMinus(p[1], p[3])
+    p[0] = SA.OperadorAritmeticoRestar(p[1], p[3])
 
 def p_operator_assign_EQUAL(p):
     '''operator : ID EQUAL expression'''
-    p[0] = SA.OperatorAssignEqual(p[1], p[3])
+    p[0] = SA.OperadorAsignarIgual(p[1], p[3])
 
 def p_operator_assign_MINUS_EQ(p):
     '''operator : ID MINUS_EQ expression'''
-    p[0] = SA.OperatorAssignMinusEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarMenosIgual(p[1], p[3])
 
 def p_operator_assign_TIMES_EQ(p):
     '''operator : ID TIMES_EQ expression'''
-    p[0] = SA.OperatorAssignTimesEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarMultiplicarIgual(p[1], p[3])
 
 def p_operator_assign_PLUS_EQ(p):
     '''operator : ID PLUS_EQ expression'''
-    p[0] = SA.OperatorAssignPlusEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarSumarIgual(p[1], p[3])
 
 def p_operator_assign_DIVIDE_EQ(p):
     '''operator : ID DIVIDE_EQ expression'''
-    p[0] = SA.OperatorAssignDivideEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarDividirIgual(p[1], p[3])
 
 def p_operator_assign_MOD_EQ(p):
     '''operator : ID MOD_EQ expression'''
-    p[0] = SA.OperatorAssignModuleEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarModuloIgual(p[1], p[3])
 
 def p_operator_assign_BITWISE_AND_EQ(p):
     '''operator : ID BITWISE_AND_EQ expression'''
-    p[0] = SA.OperatorAssignBitwiseAndEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarBitwiseYIgual(p[1], p[3])
 
 def p_operator_assign_BITWISE_OR_EQ(p):
     '''operator : ID BITWISE_OR_EQ expression'''
-    p[0] = SA.OperatorAssignBitwiseOrEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarBitwiseOIgual(p[1], p[3])
 
 def p_operator_assign_BITWISE_XOR_EQ(p):
     '''operator : ID BITWISE_XOR_EQ expression'''
-    p[0] = SA.OperatorAssignBitwiseXorEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarBitwiseXorIgual(p[1], p[3])
 
 def p_operator_assign_URSHIFT_EQ(p):
     '''operator : ID URSHIFT_EQ expression'''
-    p[0] = SA.OperatorAssignUrshiftEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarDesplazamientoDerechaSinSignoIgual(p[1], p[3])
 
 def p_operator_assign_LSHIFT_EQ(p):
     '''operator : ID LSHIFT_EQ expression'''
-    p[0] = SA.OperatorAssignLshiftEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarDesplazamientoIzquierdaIgual(p[1], p[3])
 
 def p_operator_assign_RSHIFT_EQ(p):
     '''operator : ID RSHIFT_EQ expression'''
-    p[0] = SA.OperatorAssignRshiftEQ(p[1], p[3])
+    p[0] = SA.OperadorAsignarDesplazamientoDerechaIgual(p[1], p[3])
 
 def p_operator_comparator_LEQ(p):
     '''operator : expression LEQ expression'''
-    p[0] = SA.OperatorComparatorLeq(p[1], p[3])
+    p[0] = SA.OperadorComparadorMenorIgual(p[1], p[3])
 
 def p_operator_comparator_GEQ(p):
     '''operator : expression GEQ expression'''
-    p[0] = SA.OperatorComparatorGeq(p[1], p[3])
+    p[0] = SA.OperadorComparadorMayorIgual(p[1], p[3])
 
 def p_operator_comparator_LT(p):
     '''operator : expression LT expression'''
-    p[0] = SA.OperatorComparatorLt(p[1], p[3])
+    p[0] = SA.OperadorComparadorMenor(p[1], p[3])
 
 def p_operator_comparator_GT(p):
     '''operator : expression GT expression'''
-    p[0] = SA.OperatorComparatorGt(p[1], p[3])
+    p[0] = SA.OperadorComparadorMayor(p[1], p[3])
 
 def p_operator_comparator_NEQ(p):
     '''operator : expression NEQ expression'''
-    p[0] = SA.OperatorComparatorNeq(p[1], p[3])
+    p[0] = SA.OperadorComparadorDiferente(p[1], p[3])
 
 def p_operator_comparator_EQ(p):
     '''operator : expression EQ expression'''
-    p[0] = SA.OperatorComparatorEq(p[1], p[3])
+    p[0] = SA.OperadorComparadorIgual(p[1], p[3])
 
 def p_operator_comparator_AND(p):
     '''operator : expression AND expression'''
-    p[0] = SA.OperatorComparatorAnd(p[1], p[3])
+    p[0] = SA.OperadorComparadorY(p[1], p[3])
 
 def p_operator_comparator_OR(p):
     '''operator : expression OR expression'''
-    p[0] = SA.OperatorComparatorOr(p[1], p[3])
+    p[0] = SA.OperadorComparadorO(p[1], p[3])
 
 def p_operator_comparator_BITWISE_AND(p):
     '''operator : expression BITWISE_AND expression'''
-    p[0] = SA.OperatorComparatorBitwise_And(p[1], p[3])
+    p[0] = SA.OperadorComparadorBitwiseY(p[1], p[3])
 
 def p_operator_comparator_BITWISE_OR(p):
     '''operator : expression BITWISE_OR expression'''
-    p[0] = SA.OperatorComparatorBitwise_OR(p[1], p[3])
+    p[0] = SA.OperadorComparadorBitwiseO(p[1], p[3])
 
 def p_operator_comparator_BITWISE_XOR(p):
     '''operator : expression BITWISE_XOR expression'''
-    p[0] = SA.OperatorComparatorBitwise_XOR(p[1], p[3])
+    p[0] = SA.OperadorComparadorBitwiseXOR(p[1], p[3])
 
 def p_operator_unaryoperatorprefix(p):
     '''operator : unaryoperatorprefix ID'''
-    p[0] = SA.OperatorUnaryPrefix(p[1], p[2])
+    p[0] = SA.OperadorUnarioPrefijo(p[1], p[2])
 
 def p_operator_unaryoperatorsufix(p):
     '''operator : ID unaryoperatorsufix'''
-    p[0] = SA.OperatorUnarySufix(p[1], p[2])
+    p[0] = SA.OperadorUnarioSufijo(p[1], p[2])
 
 def p_operator_operatorbittobit(p):
     '''operator : expression operatorbittobit'''
-    p[0] = SA.OperatorBitToBit(p[1], p[2])
+    p[0] = SA.OperadorBitABit(p[1], p[2])
 
 ### Operador de unario prefijo
 def p_unaryoperatorprefx(p):
@@ -410,7 +410,7 @@ def p_unaryoperatorprefx(p):
                         | PLUS
                         | NOT
     '''
-    p[0] = SA.UnaryOperatorPrefixConcrete(p[1])
+    p[0] = SA.OperadorUnarioPrefijoConcreto(p[1])
 
 ### Operador de unario sufijo
 def p_unaryoperatorsufx(p):
@@ -418,7 +418,7 @@ def p_unaryoperatorsufx(p):
     unaryoperatorsufx : INCREMENT 
                         | DECREMENT
     '''
-    p[0] = SA.UnaryOperatorSufixConcrete(p[1])
+    p[0] = SA.OperadorUnarioSufijoConcreto(p[1])
 
 ### Operador de bit a bit
 def p_operatorbittobit(p):
@@ -428,27 +428,27 @@ def p_operatorbittobit(p):
                         | RSHIFT
     
     '''
-    p[0] = SA.UnaryOperatorBitToBitConcrete(p[1])
+    p[0] = SA.OperadorUnarioBitABitConcreto(p[1])
 
 ### Operador de brackets
 def p_brackets_expression_default(p):
     ''' brackets_expression : LBRACKET RBRACKET'''
-    p[0] = SA.BracketsExpressionSimple(None)
+    p[0] = SA.ExpresionDeCorchetesSimple(None)
 
 def p_brackets_expression_int(p):
     ''' brackets_expression : LBRACKET INT_NUMBER RBRACKET'''
-    p[0] = SA.BracketsExpressionIntNumber(p[2])
+    p[0] = SA.ExpresionDeCorchetesNumeroINT(p[2])
 
 
 def p_brackets_expression_id(p):
     ''' brackets_expression : LBRACKET ID RBRACKET'''
-    p[0] = SA.BracketsExpressionId(p[2])
+    p[0] = SA.ExpresionDeCorchetesId(p[2])
 
 ### Tipos primitivos
 def p_type(p):
     ''' type : primitivetypes
                '''
-    p[0] = SA.TypePrimitive(p[1])
+    p[0] = SA.TipoPrimitivo(p[1])
 
 
 def p_primitivetypes(p):
@@ -463,25 +463,25 @@ def p_primitivetypes(p):
                         | TYPE_VOID
 
     '''
-    p[0] = SA.PrimitiveTypesConcrete(p[1])
+    p[0] = SA.TiposPrimitivosConcretos(p[1])
 
 ### Llamada a la funcion
 def p_call(p):
     ''' call : ID LPAREN params_call RPAREN'''
-    p[0] = SA.CallParams(p[1], p[3])
+    p[0] = SA.CALLParams(p[1], p[3])
 
 def p_call_default(p):
     ''' call : ID LPAREN RPAREN'''
-    p[0] = SA.CallDefault(p[1])
+    p[0] = SA.CALLPorDefecto(p[1])
 
 ### Parametros de la llamada
 def p_params_multi(p):
     ''' params_call : expression COMMA params_call'''
-    p[0] = SA.ParamsCallMulti(p[1], p[3])
+    p[0] = SA.ParamsCALLMulti(p[1], p[3])
 
 def p_params_unique(p):
     ''' params_call : expression'''
-    p[0] = SA.ParamsLlamadaUnica(p[1])
+    p[0] = SA.ParamsCALLUnica(p[1])
 
 ### Chav_vacia
 def p_chav_exp(p):
