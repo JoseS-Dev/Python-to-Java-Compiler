@@ -778,3 +778,211 @@ class OperadorComparadorBitwiseXOR(Operador):
         
     def aceptar(self, visitante):
         return visitante.visitarOperadorComparadorBitwiseXOR(self)
+
+class OperadorUnarioPrefijo(Operador):
+    def __init__(self, operador_unario_prefijo, ID):
+        self.operador_unario_prefijo = operador_unario_prefijo
+        self.ID = ID
+        
+    def aceptar(self, visitante):
+        return visitante.visitarOperadorUnarioPrefijo(self)
+    
+class OperadorUnarioSufijo(Operador):
+    def __init__(self, ID, operador_unario_sufijo):
+        self.operador_unario_sufijo = operador_unario_sufijo
+        self.ID = ID
+        
+    def aceptar(self, visitante):
+        return visitante.visitarOperadorUnarioSufijo(self)
+        
+class OperadorBitABit(Operador):
+    def __init__(self, expresion):
+        self.expresion = expresion
+        
+    def aceptar(self, visitante):
+        return visitante.visitarOperadorBitABit(self)
+
+# OPERADOR UNARIO PREFIJO
+class OperadorUnarioPrefijo(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+    
+class OperadorUnarioPrefijoConcreto(OperadorUnarioPrefijo):
+    def __init__(self, operador_unario_prefijo):
+        self.operador_unario_prefijo = operador_unario_prefijo
+        
+    def aceptar(self, visitante):
+        return visitante.visitarOperadorUnarioPrefijoConcreto(self)
+    
+
+# OPERADOR UNARIO SUFIJO
+class OperadorUnarioSufijo(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+    
+class OperadorUnarioSufijoConcreto(OperadorUnarioSufijo):
+    def __init__(self, operador_unario_sufijo):
+        self.operador_unario_sufijo = operador_unario_sufijo
+        
+    def aceptar(self, visitante):
+        return visitante.visitarOperadorUnarioSufijoConcreto(self)
+    
+# OPERADOR UNARIO BIT A BIT
+class OperadorUnarioBitABit(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+    
+class OperadorUnarioBitABitConcreto(OperadorUnarioBitABit):
+    def __init__(self, operador_unario_bit):
+        self.operador_unario_bit = operador_unario_bit
+        
+    def aceptar(self, visitante):
+        return visitante.visitarOperadorUnarioBitABitConcreto(self)
+
+# EXPRESIÓN DE CORCHETES
+class ExpresionDeCorchetes(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+          
+class ExpresionDeCorchetesSimple(ExpresionDeCorchetes):
+    def __init__(self, corchetes_por_defecto):
+        self.corchetes_por_defecto = corchetes_por_defecto
+        
+    def aceptar(self, visitante):
+        return visitante.visitarExpresionDeCorchetesSimple(self)
+          
+class ExpresionDeCorchetesNumeroEntero(ExpresionDeCorchetes):
+    def __init__(self, numero_entero):
+        self.numero_entero = numero_entero
+        
+    def aceptar(self, visitante):
+        return visitante.visitarExpresionDeCorchetesNumeroEntero(self)
+    
+class ExpresionDeCorchetesId(ExpresionDeCorchetes):
+    def __init__(self, ID):
+        self.ID = ID
+        
+    def aceptar(self, visitante):
+        return visitante.visitarExpresionDeCorchetesId(self)
+
+# TIPO
+class Tipo(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+
+class TipoPrimitivo(Tipo):
+    def __init__(self, tipos_primitivos):
+        self.tipos_primitivos = tipos_primitivos
+        
+    def aceptar(self, visitante):
+        return visitante.visitarTipoPrimitivo(self)
+        
+        
+# TIPOS PRIMITIVOS
+class TiposPrimitivos(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+
+class TiposPrimitivosConcretos(TiposPrimitivos):
+    def __init__(self, tipos_primitivos):
+        self.tipos_primitivos = tipos_primitivos
+        
+    def aceptar(self, visitante):
+        return visitante.visitarTiposPrimitivosConcretos(self)
+
+# LLAMADA
+class Llamada(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+
+class CALLParams(Llamada):
+    def __init__(self, ID, params_llamada):
+        self.ID = ID
+        self.params_llamada = params_llamada
+        
+    def aceptar(self, visitante):
+        return visitante.visitarCALLParams(self)
+
+class CALLPorDefecto(Llamada):
+    def __init__(self, ID):
+        self.ID = ID
+        
+    def aceptar(self, visitante):
+        return visitante.visitarCALLPorDefecto(self)
+    
+# PARAMS LLAMADA
+class ParamsCALL(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+    
+class ParamsCALLMulti(ParamsCALL):
+    def __init__(self, expresion, params_llamada):
+        self.expresion = expresion
+        self.params_llamada = params_llamada
+        
+    def aceptar(self, visitante):
+        return visitante.visitarParamsCALLMulti(self)
+
+# PARAMS LLAMADA ÚNICA
+class ParamsLlamadaUnica(ParamsCALL):
+    def __init__(self, expresion):
+        self.expresion = expresion
+        
+    def aceptar(self, visitante):
+        return visitante.visitarParamsLlamadaUnica(self)
+
+# EXPRESIÓN DE CLAVE
+class ExpresionClaves(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+    
+class ExpresionClaveVacia(ExpresionClaves):
+    def __init__(self):
+        pass
+        
+    def aceptar(self, visitante):
+        return visitante.visitarExpresionClaveVacia(self)
+    
+class ExpresionClaveExpresion(ExpresionClaves):
+    def __init__(self, expresion_clave):
+        self.expresion_clave = expresion_clave
+        
+    def aceptar(self, visitante):
+        return visitante.visitarExpresionClaveExpresion(self)
+
+# EXPRESIÓN CLAVE
+class ExpresionClave(metaclass=ABCMeta):
+    @abstractmethod
+    def aceptar(self, visitante):
+        pass
+    
+class ExpresionClaveMult(ExpresionClave):
+    def __init__(self, expresion, expresion_clave):
+        self.expresion = expresion
+        self.expresion_clave = expresion_clave
+        
+    def aceptar(self, visitante):
+        return visitante.visitarExpresionClaveMult(self)
+    
+class ExpresionClaveUni(ExpresionClave):
+    def __init__(self, expresion):
+        self.expresion = expresion
+        
+    def aceptar(self, visitante):
+        return visitante.visitarExpresionClaveUni(self)
+    
+class ExpresionClaveComa(ExpresionClave):
+    def __init__(self, expresion):
+        self.expresion = expresion
+        
+    def aceptar(self, visitante):
+        return visitante.visitarExpresionClaveComa(self)
