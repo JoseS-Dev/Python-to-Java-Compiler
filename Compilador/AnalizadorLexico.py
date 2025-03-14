@@ -79,6 +79,7 @@ t_AND = r'&&'
 t_OR = r'\|\|'
 t_INCREMENT = r'\+\+'
 t_DECREMENT = r'--'
+
 t_PLUS_EQ = r'\+='
 t_MINUS_EQ = r'-='
 t_TIMES_EQ = r'\*='
@@ -112,6 +113,7 @@ t_BITWISE_AND = r'&'
 t_BITWISE_OR = r'\|'
 t_BITWISE_XOR = r'\^'
 t_BITWISE_NOT = r'~'
+
 t_ignore = ' \t'
 
 # Función para comentarios
@@ -191,7 +193,7 @@ def main():
             lexer = lex.lex()
             lexer.input(directorio.read())
             for toke in lexer:
-                print('Tipo:', toke.type, ', value:', toke.value)
+                print('Tipo:', toke.type, ', valor:', toke.value)
     except FileNotFoundError:
         print("El archivo no se pudo encontrar.")
 

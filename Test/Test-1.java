@@ -1,3 +1,5 @@
-int num1 = 3
-int num2 = 5
-int resultado = num1 + num2
+public class MyClass {
+    int a = 5;
+    a++;
+    --a;
+}
