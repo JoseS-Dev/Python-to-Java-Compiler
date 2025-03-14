@@ -811,59 +811,7 @@ class PrimitiveTypesConcrete(PrimitiveTypes):
     def accept(self, visitor):
         return visitor.VisitPrimitiveTypesConcrete(self)
 
-# class PrimitiveTypesInt(PrimitiveTypes):
-#     def __init__(self, _int):
-#         self._int = _int
-#     def accept(self, visitor):
-#         pass
-    
-# class PrimitiveTypes(PrimitiveTypes):
-#     def __init__(self, _float):
-#         self._float = _float
-#     def accept(self, visitor):
-#         pass
 
-# class PrimitiveTypesDouble(PrimitiveTypes):
-#     def __init__(self, _double):
-#         self._double = _double
-#     def accept(self, visitor):
-#         pass
-    
-# class PrimitiveTypesByte(PrimitiveTypes):
-#     def __init__(self, _byte):
-#         self._byte = _byte
-#     def accept(self, visitor):
-#         pass
-
-# class PrimitiveTypesBoolean(PrimitiveTypes):
-#     def __init__(self, _boolean):
-#         self._boolean = _boolean
-#     def accept(self, visitor):
-#         pass
-    
-# class PrimitiveTypesChar(PrimitiveTypes):
-#     def __init__(self, _char):
-#         self._char = _char
-#     def accept(self, visitor):
-#         pass
-    
-# class PrimitiveTypesString(PrimitiveTypes):
-#     def __init__(self, _string):
-#         self._string = _string
-#     def accept(self, visitor):
-#         pass
-        
-# class PrimitiveTypesLong(PrimitiveTypes):
-#     def __init__(self, _long):
-#         self._long = _long
-#     def accept(self, visitor):
-#         pass
-
-# class PrimitiveTypesVoid(PrimitiveTypes):
-#     def __init__(self, _void):
-#         self._void = _void
-#     def accept(self, visitor):
-#         pass
   
     
 #CALL    

@@ -36,7 +36,7 @@ def p_class_implements(p):
     p[0] = SA.CClassImplements(p[1], p[2], p[4], p[7])
 
 
-    #VISIBILIDADE
+#VISIBILIDAD
 def p_visibility_public(p):
     '''visibility : PUBLIC '''
     p[0] = SA.VisibilityConcrete(p[1])
@@ -54,7 +54,7 @@ def p_visibility_default(p):
     p[0] = SA.VisibilityConcrete(None)
 
 
-    #CLASSMODIFIER
+#Modificadorclase
 def p_classmodifier_default(p):
     '''classmodifier : '''
     p[0] = SA.ClassModifierConcrete(None)
@@ -71,7 +71,7 @@ def p_classmodifier_package(p):
     '''classmodifier : PACKAGE'''
     p[0] = SA.ClassModifierConcrete(p[1])
 
-#MEMBROS
+#Miembros
 def p_membros(p):
     '''membros : membro'''
     p[0] = SA.MembrosUni(p[1])
@@ -80,7 +80,7 @@ def p_multimembros(p):
     '''membros : membro membros'''
     p[0] = SA.MembrosMult(p[1], p[2])
 
-#MEMBRO
+#Miembro
 def p_membro_atribute(p):
     '''membro : atribute'''
     p[0] = SA.MembroAtribute(p[1])
@@ -100,16 +100,10 @@ def p_atribute_inicialized_type(p):
     '''atribute : visibility atributemodifier type ID EQUAL expression SEMICOLON'''
     p[0] = SA.AtributeDefaultInicializedType(p[1], p[2], p[3], p[4], p[6])
 
-# def p_list_atribute_inicialized_type(p):
-#     '''atribute_list : visibility atributemodifier type LBRACKET RBRACKET ID EQUAL NEW type LBRACKET INT_NUMBER RBRACKET SEMICOLON'''
-#     pass
-
-# def p_list_atribute_default(p):
-#     '''atribute_list : visibility atributemodifier type LBRACKET RBRACKET ID EQUAL expression SEMICOLON'''
-#     pass
 
 
-#ATRIBUTEMODIFIER
+
+#Modificadoratributo
 def p_atributemodifier_default(p):
     '''atributemodifier : '''
     p[0] = SA.AtributeModifierConcrete(None)
@@ -124,7 +118,7 @@ def p_atributemodifier_final(p):
     p[0] = SA.AtributeModifierConcrete(p[1])
 
 
-#FUNÇÕES
+#Funciones
 def p_function(p):
     '''function : signature body'''
     p[0] = SA.FunctionDefault(p[1], p[2])
