@@ -193,7 +193,7 @@ def proceso_lexer(e):
     Parámetros:
         text_field_value (str): El texto obtenido de un TextField.
     """
-    text_field_value = e.control.parent.controls[1].controls[0].value
+    text_field_value = e.control.parent.parent.controls[1].controls[0].value
     try:
         # Verifica si el texto no está vacío
         if not text_field_value.strip():
@@ -207,11 +207,11 @@ def proceso_lexer(e):
         lexer.input(text_field_value)
 
         # Limpia las filas existentes en el DataTable
-        e.control.parent.controls[1].controls[1].controls[0].rows.clear()
+        e.control.parent.parent.controls[1].controls[1].controls[0].rows.clear()
 
         # Itera sobre los tokens y los añade al DataTable
         for token in lexer:
-            e.control.parent.controls[1].controls[1].controls[0].rows.append(
+            e.control.parent.parent.controls[1].controls[1].controls[0].rows.append(
                 ft.DataRow(
                     cells=[
                         ft.DataCell(ft.Text(token.type)),
@@ -221,8 +221,24 @@ def proceso_lexer(e):
             )
 
         # Actualiza el DataTable una vez que todas las filas han sido añadidas
-        e.control.parent.controls[1].controls[1].controls[0].update()
+        e.control.parent.parent.controls[1].controls[1].controls[0].update()
 
     except Exception as e:
         print(f"Ocurrió un error al procesar el texto: {e}")
         return
+
+def abrir_archivo(e: ft.FilePickerResultEvent, page: ft.Page):
+    if e.files:
+        selected_file = e.files[0]
+        file_path = selected_file.path
+        if file_path.endswith(".java"):
+            with open(file_path, "r") as file:
+                content = file.read()
+        else:
+            content = "Por favor, selecciona un archivo .java"
+    else:
+        content= "Ningún archivo seleccionado"
+    page.controls[0].controls[1].controls[0].value = content
+    page.controls[0].controls[1].controls[0].update()
+
+

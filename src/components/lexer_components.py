@@ -1,5 +1,4 @@
 import flet as ft
-from functions.lexer import proceso_lexer
 
 def mainTitle():
     return ft.Text(
@@ -33,10 +32,10 @@ def table():
         height=10000,
     )
 
-def button():
+def button(Buttontext,function):
     return ft.Button(
-        text="Analizar",
+        text=Buttontext,
         width=100,
         height=40,
-        on_click=proceso_lexer
+        on_click=function
     )

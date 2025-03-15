@@ -14,6 +14,6 @@ def main(page: ft.Page):
     page.window.maximizable = False
     page.window.width = 1024,
     page.window.height = 768,
-    page.add(lexer_page())
+    page.add(lexer_page(page))
 
 ft.app(main, assets_dir="assets")
