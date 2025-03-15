@@ -1,5 +1,5 @@
 import flet as ft
-from components.lexer_components import mainTitle, textarea, table, button
+from components.lexer import mainTitle, textarea, table, button
 from functions.lexer import proceso_lexer, abrir_archivo
 
 def lexer_page(page: ft.Page):

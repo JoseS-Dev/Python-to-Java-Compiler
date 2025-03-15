@@ -1,5 +1,5 @@
 import flet as ft
-from pages.lexer_page import lexer_page
+from pages.lexer import lexer_page
 
 def main(page: ft.Page):
     page.fonts = {
