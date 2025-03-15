@@ -9,7 +9,7 @@ reservadas = {
    'double': 'TYPE_DOUBLE', 'char': 'TYPE_CHAR', 'String' : 'TYPE_STRING', 'long': 'TYPE_LONG',
    'void': 'TYPE_VOID',
 
-   #VISIBILIDADE
+   #VISIBILIDAD
    'public': 'PUBLIC', 'private': 'PRIVATE',
    'default': 'DEFAULT', 'protected': 'PROTECTED',
  
@@ -108,6 +108,7 @@ t_BITWISE_AND = r'&'
 t_BITWISE_OR = r'\|'
 t_BITWISE_XOR = r'\^'
 t_BITWISE_NOT = r'~'
+
 
 
 def t_comments_1(t):
