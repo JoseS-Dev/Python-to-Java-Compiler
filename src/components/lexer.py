@@ -15,7 +15,7 @@ def textarea():
         min_lines=23,
         height=600,
         label="Escribe tu código aquí",
-        width=600,
+        width=550,
         border_color='#292E41',
         border_width=2,
     )
@@ -28,8 +28,8 @@ def table():
         ],
         rows=[ft.DataRow(cells=[ft.DataCell(ft.Text("")), ft.DataCell(ft.Text(""))]),],
         border=ft.border.all(2, '#292E41'),
-        width=600,
-        height=10000,
+        width=550,
+        height=100000,
     )
 
 def button(Buttontext,function):

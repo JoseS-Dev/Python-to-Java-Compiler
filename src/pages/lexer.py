@@ -13,7 +13,7 @@ def lexer_page(page: ft.Page):
             mainTitle(),
             ft.Row(
                 expand=True,
-                alignment = ft.MainAxisAlignment.SPACE_BETWEEN,
+                alignment = ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     textarea(),
@@ -21,7 +21,7 @@ def lexer_page(page: ft.Page):
                         controls=[
                             table()
                         ],
-                        width=600,
+                        width=550,
                         height=600,
                         spacing=0,
                         padding=0,
@@ -32,7 +32,7 @@ def lexer_page(page: ft.Page):
             ft.Row(
                 alignment = ft.MainAxisAlignment.CENTER,
                 controls=[
-                    button("Analizar", proceso_lexer),
+                    button("Ejecutar", proceso_lexer),
                     button("Abrir Doc",lambda _: file_picker.pick_files(allowed_extensions=["java"],allow_multiple=False))
                 ]
             )
