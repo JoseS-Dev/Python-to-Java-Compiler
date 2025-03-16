@@ -540,7 +540,7 @@ def p_error(p):
 
 
 def main():
-    f = open("Test/Test-1.java", "r")
+    f = open("Test/BadTest1.java", "r")
     lexer = lex.lex()
     lexer.input(f.read())
     parser = yacc.yacc()
