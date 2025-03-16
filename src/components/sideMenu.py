@@ -1,14 +1,5 @@
 import flet as ft
-
-def button(page: ft.Page,Buttontext,function):
-    return(
-        ft.Button(
-            text=Buttontext,   
-            width=100,
-            height=40,
-            on_click= function
-        )
-    )
+from components.globals import button
 
 def sideMenu(page: ft.Page):
     return(

@@ -13,8 +13,8 @@ def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.window.maximizable = False
-    page.window.width = 1300,
-    page.window.height = 800,
+    page.window.width = 1300
+    page.window.height = 800
     page.add(
         ft.Row(
             expand=True,

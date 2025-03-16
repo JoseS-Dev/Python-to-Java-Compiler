@@ -162,5 +162,5 @@ cython_debug/
 # Flet
 storage/
 
-Compilador/parsetab.py
-Compilador/parser.out
+parsetab.py
+parser.out
