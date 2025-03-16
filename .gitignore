@@ -162,4 +162,4 @@ cython_debug/
 # Flet
 storage/
 
-parsetab.py
+Compilador/parsetab.py
