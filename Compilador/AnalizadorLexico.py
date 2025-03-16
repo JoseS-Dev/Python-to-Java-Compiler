@@ -173,7 +173,7 @@ def t_error(t):
 
 
 def main():
-   f = open("Test/Test-2.java", "r")
+   f = open("Test/Test2.java", "r")
    lexer = lex.lex(debug=1)
    lexer.input(f.read())
    print('\n\n# lexer output:')

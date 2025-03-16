@@ -163,3 +163,4 @@ cython_debug/
 storage/
 
 Compilador/parsetab.py
+Compilador/parser.out
