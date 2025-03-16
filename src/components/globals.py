@@ -27,3 +27,6 @@ def button(page: ft.Page,Buttontext,function):
         height=40,
         on_click=function
     )
+
+TEXT_PAD = textpad()
+TITLE = title("Analizador Léxico")

@@ -162,5 +162,6 @@ cython_debug/
 # Flet
 storage/
 
+#Parser cache
 parsetab.py
 parser.out

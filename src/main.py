@@ -1,6 +1,6 @@
 import flet as ft
-from pages.lexer import lexer_page
-from components.sideMenu import sideMenu
+from layout.mainLayout import mainLayout
+from layout.sideMenu import sideMenu
 
 def main(page: ft.Page):
     page.fonts = {
@@ -19,7 +19,7 @@ def main(page: ft.Page):
         ft.Row(
             expand=True,
             controls=[
-                lexer_page(page),
+                mainLayout(page),
                 sideMenu(page)
                 ]
             )

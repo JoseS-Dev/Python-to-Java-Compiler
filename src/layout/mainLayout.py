@@ -1,9 +1,9 @@
 import flet as ft
 from components.lexer import listview
-from components.globals import textpad, button, title
+from components.globals import TEXT_PAD, button, TITLE
 from functions.lexer import proceso_lexer, abrir_archivo
 
-def lexer_page(page: ft.Page):
+def mainLayout(page: ft.Page):
     file_picker = ft.FilePicker(on_result=lambda e: abrir_archivo(e, page))
     page.overlay.append(file_picker)
     return ft.Column(
@@ -11,13 +11,13 @@ def lexer_page(page: ft.Page):
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         controls=[
-            title("Analizador Léxico"),
+            TITLE,
             ft.Row(
                 expand=True,
                 alignment = ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    textpad(),
+                    TEXT_PAD,
                     listview(),
                 ],
                 scroll= ft.ScrollMode.AUTO,
