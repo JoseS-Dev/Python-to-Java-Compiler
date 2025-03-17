@@ -8,9 +8,9 @@ def sideMenu(page: ft.Page):
             height = 600,
             horizontal_alignment= ft.CrossAxisAlignment.CENTER,
             controls=[
-                button(page,"Léxico",lambda _: print("Hola")),
-                button(page,"Sintáctico",lambda _: print("XD")),
-                button(page,"Semántico",lambda _: print("Hola"))
+                button(page,lambda _: print("Hola"),"Léxico"),
+                button(page,lambda _: print("XD"),"Sintáctico"),
+                button(page,lambda _: print("Hola"),"Semántico")
             ],
             alignment= ft.MainAxisAlignment.CENTER
         )

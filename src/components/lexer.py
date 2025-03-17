@@ -12,7 +12,7 @@ def table():
         height=100000,
     )
 
-def listview():
+def listview(boolean: bool):
     return(ft.ListView(
         controls=[
             table()
@@ -21,5 +21,6 @@ def listview():
             height=600,
             spacing=0,
             padding=0,
+            visible=boolean,
             )
     )
