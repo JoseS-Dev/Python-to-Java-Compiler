@@ -2,8 +2,7 @@ import flet as ft
 from components.lexer import listview
 from components.parser import parserLayout
 from components.globals import textpad, button, TITLE
-from functions.lexer import proceso_lexer
-from functions.general import clear, textPadClear, abrir_archivo
+from functions.general import clear, textPadClear, abrir_archivo, ejecucion
 
 def mainLayout(page: ft.Page):
     file_picker = ft.FilePicker(on_result=lambda e: abrir_archivo(e, page))
@@ -19,7 +18,7 @@ def mainLayout(page: ft.Page):
                 alignment = ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    textpad(page),
+                    textpad(page, lambda _: clear(page)),
                     listview(True),
                     parserLayout(False),
                 ],
@@ -31,7 +30,7 @@ def mainLayout(page: ft.Page):
                 controls=[
                     button(page,lambda _: file_picker.pick_files(allowed_extensions=["java"],allow_multiple=False),"Subir",ft.icons.UPLOAD),
                     button(page, lambda _: (textPadClear(page),clear(page)),"Borrar", ft.icons.DELETE),
-                    button(page, proceso_lexer,"Ejecutar"),
+                    button(page, ejecucion,"Ejecutar"),
                     ]
             )
         ],

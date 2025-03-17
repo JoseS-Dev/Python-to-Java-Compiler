@@ -5,7 +5,7 @@ def stateOutput():
         width = 550,
         border_color='#292E41',
         border_width=2,
-        label="Output State",
+        label="Output",
         read_only=True,
     )
 
@@ -19,6 +19,7 @@ def textarea():
         border_width=2,
         expand=True,
         read_only= True,
+        label="Debug Output"
     )
 
 def parserLayout(boolean: bool):

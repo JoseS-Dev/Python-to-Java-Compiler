@@ -1,6 +1,9 @@
-from lexer import *
+from functions.lexer import *
 import ply.yacc as yacc
-import sintaxis as SA
+import functions.sintaxis as SA
+import io
+import sys
+from ply import lex, yacc
 
 precedence = (
     ('left', 'EQUAL','MINUS_EQ','TIMES_EQ','PLUS_EQ','DIVIDE_EQ','MOD_EQ','BITWISE_AND_EQ','BITWISE_OR_EQ','BITWISE_XOR_EQ','URSHIFT_EQ','LSHIFT_EQ','RSHIFT_EQ'),
@@ -538,14 +541,47 @@ def p_error(p):
     else:
         print("Syntax error at EOF")
 
+def proceso_parser(e):
+    text_field_value = e.control.parent.parent.controls[1].controls[0].value
+    try:
+        if not text_field_value.strip():
+            print("La entrada está vacía.")
+            return
 
-def main():
-    f = open("Test/BadTest1.java", "r")
-    lexer = lex.lex()
-    lexer.input(f.read())
-    parser = yacc.yacc()
-    result = parser.parse(debug=True) #True
+        # Configura el lexer y el parser
+        lexer = lex.lex()
+        lexer.input(text_field_value)
+        parser = yacc.yacc()
+
+        # Limpia los controles de salida
+        e.control.parent.parent.controls[1].controls[2].controls[0].value = ''
+        e.control.parent.parent.controls[1].controls[2].controls[1].value = ''
+        e.control.parent.parent.controls[1].controls[2].update()
+
+        # Redirige la salida estándar y la salida de error a objetos StringIO
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = io.StringIO()
+        sys.stderr = io.StringIO()
+
+        # Ejecuta el parser y captura la salida
+        result = parser.parse(text_field_value, debug=True)  # Aquí se genera la salida de depuración
+
+        # Recupera la salida capturada (incluyendo la salida de depuración)
+        output = sys.stdout.getvalue()
+        outputdebug = sys.stderr.getvalue()
+        if not output.strip():
+            output = "Análisis sintáctico completado sin errores."
 
 
-if __name__ == "__main__":
-    main()
+        # Restaura la salida estándar y de error
+        sys.stdout = old_stdout
+        sys.stderr = old_stderr
+
+        # Asigna la salida capturada al control correspondiente
+        e.control.parent.parent.controls[1].controls[2].controls[0].value = output
+        e.control.parent.parent.controls[1].controls[2].controls[1].value = outputdebug
+
+    except Exception as ex:
+        print(f"Ocurrió un error al procesar el texto: {ex}")
+    e.control.parent.parent.controls[1].controls[2].update()

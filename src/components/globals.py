@@ -1,5 +1,4 @@
 import flet as ft
-from functions.general import clear
 
 def title(texto):
     return ft.Text(
@@ -9,7 +8,7 @@ def title(texto):
         weight=ft.FontWeight.BOLD
         )
 
-def textpad(page: ft.Page):
+def textpad(page: ft.Page,function):
     return ft.TextField(
         multiline=True,
         max_lines=9999,
@@ -19,7 +18,7 @@ def textpad(page: ft.Page):
         border_color='#292E41',
         border_width=2,
         height=600,
-        on_change=lambda _: clear(page)
+        on_change=function
     )
 
 def button(page: ft.Page,function,Buttontext="",icono=None):
