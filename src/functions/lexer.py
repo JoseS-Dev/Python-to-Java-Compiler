@@ -172,9 +172,6 @@ def t_error(t):
 def proceso_lexer(e):
     """
     Procesa el texto de un TextField utilizando un lexer y muestra los tokens.
-
-    Parámetros:
-        text_field_value (str): El texto obtenido de un TextField.
     """
     text_field_value = e.control.parent.parent.controls[1].controls[0].value
     try:

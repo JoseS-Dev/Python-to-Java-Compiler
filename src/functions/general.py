@@ -21,3 +21,16 @@ def abrir_archivo(e: ft.FilePickerResultEvent, page: ft.Page):
         content= "Ningún archivo seleccionado"
     page.controls[0].controls[0].controls[1].controls[0].value = content
     page.controls[0].controls[0].controls[1].controls[0].update()
+
+def changeSection(e):
+    textButton = str(e.control.text)
+    if textButton == "Léxico":
+        print(e.control.parent.parent.controls[0].controls[1].controls[1])
+        e.control.parent.parent.controls[0].controls[1].controls[1].visible = True
+        e.control.parent.parent.controls[0].controls[1].controls[2].visible = False
+    elif textButton == "Sintáctico":
+        e.control.parent.parent.controls[0].controls[1].controls[1].visible = False
+        e.control.parent.parent.controls[0].controls[1].controls[2].visible = True
+    else:
+        return
+    e.control.parent.parent.controls[0].controls[1].update()
