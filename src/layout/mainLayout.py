@@ -2,8 +2,8 @@ import flet as ft
 from components.lexer import listview
 from components.parser import parserLayout
 from components.globals import textpad, button, TITLE
-from functions.lexer import proceso_lexer, abrir_archivo
-from functions.general import clear, textPadClear
+from functions.lexer import proceso_lexer
+from functions.general import clear, textPadClear, abrir_archivo
 
 def mainLayout(page: ft.Page):
     file_picker = ft.FilePicker(on_result=lambda e: abrir_archivo(e, page))
