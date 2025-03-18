@@ -8,7 +8,7 @@ def main(page: ft.Page):
         "Poppins-Bold": "fonts/Poppins-Bold.ttf",
         "Poppins-SemiBold": "fonts/Poppins-SemiBold.ttf",
     }
-    page.title = "Compilador"
+    page.title = "Compilador // Alejandro Chávez & José Santana"
     page.theme_mode = ft.ThemeMode.DARK
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
