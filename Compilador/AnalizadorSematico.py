@@ -118,6 +118,18 @@ class SemanticAnalyzer(SemanticVisitor):
         
         self.symbol_table.exit_scope()
         self.current_method = None
+    
+    def VisitSignatureSimple(self, node):
+        pass # Se verifica en FunctionDefault
+
+    def VisitSignatureMult(self, node):
+        pass # Se verifica en FunctionDefault
+    
+    def VisitSigparamsId(self, node):
+        if not self.is_valid_type(node.type):
+            self.add_error(f'Invalid type {node.type} in method {self.current_method}')
+        
+        self.symbol_table.add_variable(node.ID, node.type)
 
 ## Tabla de Simbolos 
 class SymbolTable:
