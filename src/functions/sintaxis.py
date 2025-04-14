@@ -1,4 +1,5 @@
 from abc import abstractmethod, ABCMeta 
+import matplotlib.pyplot as plt
 
 #PROGRAM
 class Program(metaclass=ABCMeta):
@@ -9,8 +10,14 @@ class Program(metaclass=ABCMeta):
 class ProgramConcrete(Program):
     def __init__(self, cclass):
         self.cclass = cclass
+
     def accept(self, visitor):
         return visitor.VisitProgramConcrete(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, "Program", bbox=dict(facecolor='white', edgecolor='black'), ha='center')
+        self.cclass.draw(ax, x, y - dy, dx / 2, dy)
+
         
         
 #CLASS
@@ -28,15 +35,26 @@ class CClassExtends(CClass):
         self.membros = membros
     def accept(self, visitor):
         return visitor.VisitCClassExtends(self)
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, f"Class: {self.class_name}\nExtends: {self.extends}", bbox=dict(facecolor='white', edgecolor='black'))
+        self.members.draw(ax, x, y - dy, dx, dy)
         
 class CClassDefault(CClass):
-    def __init__(self, visibility, classmodifier, ID_NOMECLASS,  membros):
+    def __init__(self, visibility, classmodifier, ID_NOMECLASS, membros):
         self.visibility = visibility     
         self.classmodifier = classmodifier
         self.ID_NOMECLASS = ID_NOMECLASS
         self.membros = membros
+
     def accept(self, visitor):
         return visitor.VisitCClassDefault(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        label = f"Class: {self.ID_NOMECLASS}"
+        ax.text(x, y, label, bbox=dict(facecolor='lightblue', edgecolor='black'), ha='center')
+        if self.membros:
+            self.membros.draw(ax, x - dx, y - dy, dx / 2, dy)
+
     
 class CClassImplements(CClass):
     def __init__(self, visibility, classmodifier, ID_NOMECLASS, membros):
@@ -84,8 +102,14 @@ class Membros(metaclass=ABCMeta):
 class MembrosUni(Membros):
     def __init__(self, membro):
         self.membro = membro
+
     def accept(self, visitor):
         return visitor.VisitMembrosUni(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, "Membros", bbox=dict(facecolor='lightgray', edgecolor='black'), ha='center')
+        self.membro.draw(ax, x, y - dy, dx, dy)
+
     
 class MembrosMult(Membros):
     def __init__(self, membro, membros):
@@ -101,17 +125,29 @@ class Membro(metaclass=ABCMeta):
     def accept(self,visitor):
         pass
     
+
 class MembroAtribute(Membro):
-    def __init__(self,atribute):
+    def __init__(self, atribute):
         self.atribute = atribute
+
     def accept(self, visitor):
         return visitor.VisitMembroAtribute(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, "Atribute", bbox=dict(facecolor='orange', edgecolor='black'), ha='center')
+        self.atribute.draw(ax, x, y - dy, dx, dy)
 
 class MembroFunction(Membro):
     def __init__(self, function):
         self.function = function
+
     def accept(self, visitor):
         return visitor.VisitMembroFunction(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, "Function", bbox=dict(facecolor='lightgreen', edgecolor='black'), ha='center')
+        self.function.draw(ax, x, y - dy, dx, dy)
+
 
 
 #ATRIBUTOS
@@ -126,8 +162,13 @@ class AtributeDefault(Atribute):
         self.atributemodifier = atributemodifier
         self.type = type
         self.ID = ID
+
     def accept(self, visitor):
         return visitor.VisitAtributeDefault(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, f"Atribute: {self.ID}", bbox=dict(facecolor='white', edgecolor='black'), ha='center')
+
     
 class AtributeDefaultInicializedType(Atribute):
     def __init__(self, visibility, atributemodifier, type, ID, expression):
@@ -163,8 +204,15 @@ class FunctionDefault(Function):
     def __init__(self, signature, body):
         self.signature = signature
         self.body = body
+
     def accept(self, visitor):
         return visitor.VisitFunctionDefault(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, "FunctionDefault", bbox=dict(facecolor='lightyellow', edgecolor='black'), ha='center')
+        self.signature.draw(ax, x - dx / 2, y - dy, dx / 2, dy)
+        self.body.draw(ax, x + dx / 2, y - dy, dx / 2, dy)
+
     
 
 #SIGNATURE
@@ -226,8 +274,14 @@ class Body(metaclass=ABCMeta):
 class BodyStms(Body):
     def __init__(self, stms):
         self.stms = stms
+
     def accept(self, visitor):
         return visitor.VisitBodyStms(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, "Body", bbox=dict(facecolor='pink', edgecolor='black'), ha='center')
+        self.stms.draw(ax, x, y - dy, dx, dy)
+
     
 #STMS
 class Stms(metaclass=ABCMeta):
@@ -238,8 +292,14 @@ class Stms(metaclass=ABCMeta):
 class StmsUni(Stms):
     def __init__(self, stm):
         self.stm = stm
+
     def accept(self, visitor):
         return visitor.VisitStmsUni(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, "StmsUni", bbox=dict(facecolor='lightgray', edgecolor='black'), ha='center')
+        self.stm.draw(ax, x, y - dy, dx, dy)
+
     
 class StmsMulti(Stms):
     def __init__(self, stm, stms):
@@ -258,8 +318,14 @@ class Stm(metaclass=ABCMeta):
 class StmExpression(Stm):
     def __init__(self, expression):
         self.expression = expression
+
     def accept(self, visitor):
         return visitor.VisitStmExpression(self)
+
+    def draw(self, ax, x, y, dx, dy):
+        ax.text(x, y, "StmExpression", bbox=dict(facecolor='orange', edgecolor='black'), ha='center')
+        self.expression.draw(ax, x, y - dy, dx, dy)
+
     
 class StmExpressionWhile(Stm):
     def __init__(self, expression, bodyorstm):

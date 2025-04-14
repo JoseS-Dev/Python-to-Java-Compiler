@@ -4,6 +4,8 @@ import functions.sintaxis as SA
 import io
 import sys
 from ply import lex, yacc
+import matplotlib.pyplot as plt
+from functions.arboldraw import agregar_draw_si_falta
 
 precedence = (
     ('left', 'EQUAL','MINUS_EQ','TIMES_EQ','PLUS_EQ','DIVIDE_EQ','MOD_EQ','BITWISE_AND_EQ','BITWISE_OR_EQ','BITWISE_XOR_EQ','URSHIFT_EQ','LSHIFT_EQ','RSHIFT_EQ'),
@@ -541,6 +543,51 @@ def p_error(p):
     else:
         print("Syntax error at EOF")
 
+def draw_tree(node, ax, x, y, dx, dy):
+    node.draw(ax, x, y, dx, dy)
+
+import matplotlib.pyplot as plt
+
+def draw_ast_node(ax, node, x, y, dx, dy):
+    """Dibuja el nodo y sus hijos recursivamente con separación visual"""
+    label = node.__class__.__name__
+    if hasattr(node, '__dict__'):
+        text = label
+    else:
+        text = str(node)
+
+    # Dibuja el nodo actual
+    ax.text(x, y, text, bbox=dict(facecolor='white', edgecolor='black'), ha='center', fontsize=10)
+
+    # Obtener hijos del nodo
+    children = []
+    for attr in vars(node).values():
+        if isinstance(attr, list):
+            children.extend([c for c in attr if hasattr(c, '__dict__')])
+        elif hasattr(attr, '__dict__'):
+            children.append(attr)
+
+    num = len(children)
+    if num == 0:
+        return
+
+    spacing = dx / max(num - 1, 1) if num > 1 else 0  # separación entre hijos
+    start_x = x - (spacing * (num - 1) / 2)  # posición inicial centrada
+
+    for i, child in enumerate(children):
+        child_x = start_x + i * spacing
+        child_y = y - dy
+        ax.plot([x, child_x], [y, child_y], color='black')  # Línea entre padre e hijo
+        draw_ast_node(ax, child, child_x, child_y, dx / 1.5, dy)
+
+def visualize_tree(root):
+    fig, ax = plt.subplots(figsize=(20, 12))  # Tamaño de la figura
+    draw_ast_node(ax, root, x=0, y=0, dx=40, dy=5)  # Ajusta dx y dy para espaciamiento
+    ax.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+
 def proceso_parser(e):
     text_field_value = e.control.parent.parent.controls[1].controls[0].value
     try:
@@ -564,6 +611,8 @@ def proceso_parser(e):
         sys.stdout = io.StringIO()
         sys.stderr = io.StringIO()
 
+        agregar_draw_si_falta()
+
         # Ejecuta el parser y captura la salida
         result = parser.parse(text_field_value, debug=True)  # Aquí se genera la salida de depuración
 
@@ -573,7 +622,6 @@ def proceso_parser(e):
         if not output.strip():
             output = "Análisis sintáctico completado sin errores."
 
-
         # Restaura la salida estándar y de error
         sys.stdout = old_stdout
         sys.stderr = old_stderr
@@ -581,6 +629,9 @@ def proceso_parser(e):
         # Asigna la salida capturada al control correspondiente
         e.control.parent.parent.controls[1].controls[2].controls[0].value = output
         e.control.parent.parent.controls[1].controls[2].controls[1].value = outputdebug
+
+        # Visualiza el árbol sintáctico
+        visualize_tree(result)
 
     except Exception as ex:
         print(f"Ocurrió un error al procesar el texto: {ex}")
