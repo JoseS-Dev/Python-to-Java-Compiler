@@ -519,7 +519,7 @@ class SemanticAnalyzer(SemanticVisitor):
         return 'boolean'
 
 
-    def VisitOperatorLogicalAnd(self, node):
+    def VisitOperatorLogicalAND(self, node):
         left_type = self.visit(node.expression_1)
         right_type = self.visit(node.expression_2)
 
@@ -530,7 +530,7 @@ class SemanticAnalyzer(SemanticVisitor):
         return 'boolean'
 
 
-    def VisitOperatorLogicalOr(self, node):
+    def VisitOperatorLogicalOR(self, node):
         left_type = self.visit(node.expression_1)
         right_type = self.visit(node.expression_2)
 
@@ -541,8 +541,140 @@ class SemanticAnalyzer(SemanticVisitor):
         return 'boolean'
 
 
-    def VisitOperatorComparatorBitwise_And(self, node):
+    def VisitOperatorComparatorBitwise_AND(self, node):
+        left_type = self.visit(node.expression_1)
+        right_type = self.visit(node.expression_2)
+
+        if not self.are_integral_types(left_type) or not self.are_integral_types(right_type):
+            self.add_error(f"Bitwise AND requires integral operands, found '{left_type}' and '{right_type}'")
+            return 'unknown'
         
+        return self.get_integral_result_type(left_type, right_type)
+
+
+    def VisitOperatorComparatorBitwise_OR(self, node):
+        left_type = self.visit(node.expression_1)
+        right_type = self.visit(node.expression_2)
+
+        if not self.are_integral_types(left_type) or not self.are_integral_types(right_type):
+            self.add_error(f"Bitwise OR requires integral operands, found '{left_type}' and '{right_type}'")
+            return 'unknown'
+        
+        return self.get_integral_result_type(left_type, right_type)
+    
+
+    def VisitOperatorComparatorBitwise_XOR(self, node):
+        left_type = self.visit(node.expression_1)
+        right_type = self.visit(node.expression_2)
+
+        if not self.are_integral_types(left_type) or not self.are_integral_types(right_type):
+            self.add_error(f"Bitwise XOR requires integral operands, found '{left_type}' and '{right_type}'")
+            return 'unknown'
+        
+        return self.get_integral_result_type(left_type, right_type)
+
+
+    def VisitOperatorAssignMinusEQ(self, node):
+        return self.visit_compound_assignment(node, '-')
+
+    def VisitOperatorAssignTimesEQ(self, node):
+        return self.visit_compound_assignment(node, '*')
+
+    def VisitOperatorAssignPlusEQ(self, node):
+        return self.visit_compound_assignment(node, '+')
+
+    def VisitOperatorAssignDivideEQ(self, node):
+        return self.visit_compound_assignment(node, '/')
+
+    def VisitOperatorAssignModuleEQ(self, node):
+        return self.visit_compound_assignment(node, '%')
+
+    def VisitOperatorAssignBitwiseAndEQ(self, node):
+        return self.visit_compound_assignment(node, '&')
+
+    def VisitOperatorAssignBitwiseOrEQ(self, node):
+        return self.visit_compound_assignment(node, '|')
+
+    def VisitOperatorAssignBitwiseXorEQ(self, node):
+        return self.visit_compound_assignment(node, '^')
+
+    def VisitOperatorAssignUrshiftEQ(self, node):
+        return self.visit_compound_assignment(node, '>>>')
+
+    def VisitOperatorAssignLshiftEQ(self, node):
+        return self.visit_compound_assignment(node, '<<')
+
+    def VisitOperatorAssignRshiftEQ(self, node):
+        return self.visit_compound_assignment(node, '>>')
+
+    def visit_compound_assignment(self, node, op):
+        var_info = self.symbol_table.lookup_variable(node.ID)
+        if var_info is None:
+            self.add_error(f"Undeclared variable '{node.ID}'")
+            return 'unknown'
+
+        expr_type = self.visit(node.expression)
+
+        #Verificacion de tipos
+        if op == '+' and var_info['type'] == 'String':
+            if expr_type != 'String':
+                self.add_error(f"Type mismatch in compound assignment. Expected 'String', found '{expr_type}'")
+            return 'String'
+        
+        if not self.are_types_compatible(var_info['type'], expr_type, op):
+            self.add_error(f"Type mismatch in compound assignment. Expected '{var_info['type']}', found '{expr_type}'")
+        
+        return var_info['type']
+
+
+    def VisitOperatorUnaryPrefix(self, node):
+        operator_type = self.visit(node.ID)
+        if node.unaryoperatorprefx in ['++', '--', '+', '-']:
+            if not self.are_numeric_types(operator_type):
+                self.add_error(f"Invalid operand for unary operator '{node.unaryoperatorprefx}': '{operator_type}'")
+                return 'unknown'
+            return operator_type
+        elif node.unaryoperatorprefx == '!':
+            if operator_type != 'boolean':
+                self.add_error(f"Invalid operand for unary operator '{node.unaryoperatorprefx}': '{operator_type}'")
+                return 'unknown'
+            return 'boolean'
+        else:
+            self.add_error(f"Unknown unary operator '{node.unaryoperatorprefx}'")
+            return 'unknown'
+        
+    def VisitOperatorUnarySufix(self, node):
+        operator_type = self.visit(node.ID)
+        if node.unaryoperatorsufix in ['++', '--']:
+            if not self.are_numeric_types(operator_type):
+                self.add_error(f"Invalid operand for unary operator '{node.unaryoperatorsufix}': '{operator_type}'")
+                return 'unknown'
+            return operator_type
+        else:
+            self.add_error(f"Unknown unary operator '{node.unaryoperatorsufix}'")
+            return 'unknown'
+    
+
+    def VisitUnaryOperatorPrefixConcrete(self, node):
+        return node.unaryoperatorprefx # Retorna el operador para que el padre lo use
+
+    def VisitUnaryOperatorSufixConcrete(self, node):
+        return node.unaryoperatorsufix # Retorna el operador para que el padre lo use
+
+
+    def VisitOperatorBitToBit(self, node):
+        expr_type = self.visit(node.expression)
+
+        if not self.are_integral_types(expr_type):
+            self.add_error(f"Invalid operand for bitwise operator: '{expr_type}'")
+            return 'unknown'
+
+        return expr_type
+    
+    def VisitUnaryOperatorBitToBitConcrete(self, node):
+        return node.unaryoperatorbit
+            
+
 
     def VisitOperatorAssignEqual(self, node):
         var_info = self.symbol_table.lookup_variable(node.ID)
@@ -629,6 +761,22 @@ class SemanticAnalyzer(SemanticVisitor):
             if t == type1 or t == type2:
                 return t
         return 'int'  # Default
+
+    def are_integral_types(self, type_name):
+        return type_name in {'int', 'short', 'byte', 'long'}
+    
+    def are_comparable_types(self, type_name):
+        # Tipos que se pueden comparar entre sí
+        comparable_types = {'int', 'float', 'double', 'boolean', 'char', 'String'}
+        return type_name in comparable_types
+
+    def get_integral_result_type(self, type1, type2):
+        # Reglas para determinar el tipo resultante de operaciones bitwise
+        integral_priority = ['long', 'int', 'short', 'byte']
+        for t in integral_priority:
+            if t == type1 or t == type2:
+                return t
+        return 'int'
     
     def has_return_statement(self, body):
         # Recorrer el cuerpo del método buscando return statements
