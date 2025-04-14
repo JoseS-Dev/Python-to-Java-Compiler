@@ -130,6 +130,61 @@ class SemanticAnalyzer(SemanticVisitor):
             self.add_error(f'Invalid type {node.type} in method {self.current_method}')
         
         self.symbol_table.add_variable(node.ID, node.type)
+    
+    def VisitSigparamsSigparams(self, node):
+        self.visit(node.sigparams)
+        self.visit(node.sigparam)
+    
+    def VisitBodyStms(self, node):
+        self.visit(node.stms)
+    
+    def VisitStmsUni(self, node):
+        self.visit(node.stm)
+    
+    def VisitStmsMult(self, node):
+        self.visit(node.stm)
+        self.visit(node.stms)
+    
+    def VisitStmExpression(self, node):
+        self.visit(node.expression)
+    
+    def VisitStmExpressionWhile(self,node):
+        cond_type = self.visit(node.expression)
+        if cond_type != 'boolean':
+            self.add_error(f'Condition of while must be boolean, got {cond_type}')
+        
+        #Analizar el cuerpo del while
+        self.loop_depth += 1
+        self.visit(node.bodyorstm)
+        self.loop_depth -= 1
+    
+    def VisitStmExpressionDoWhile(self,node):
+        self.loop_depth += 1
+        self.visit(node.bodyorstm)
+        self.loop_depth -= 1
+
+        cond_type = self.visit(node.expression)
+        if cond_type != 'boolean':
+            self.add_error(f'Condition of do-while must be boolean, got {cond_type}')
+    
+    def VisitStmExpressionFor(self,node):
+        self.visit(node.expression_for)
+        if node.expression_mid is not None:
+            cond_type = self.visit(node.expression_mid)
+            if cond_type != 'boolean':
+                self.add_error(f'Condition of for must be boolean, got {cond_type}')
+        
+        # Analizamos el incremento del for
+        if node.expression_final is not None:
+            self.visit(node.expression_final)
+        
+        # Analizamos el cuerpo del for
+        self.loop_depth += 1
+        self.visit(node.bodyorstm)
+        self.loop_depth -= 1
+    
+    
+
 
 ## Tabla de Simbolos 
 class SymbolTable:
