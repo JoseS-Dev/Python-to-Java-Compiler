@@ -36,11 +36,19 @@ def changeSection(e):
         TITLE.update()
         e.control.parent.parent.controls[0].controls[1].controls[1].visible = True
         e.control.parent.parent.controls[0].controls[1].controls[2].visible = False
+        e.control.parent.parent.controls[0].controls[1].controls[3].visible = False
     elif textButton == "Sintáctico":
         TITLE.value = "Analizador Sintáctico"
         TITLE.update()
         e.control.parent.parent.controls[0].controls[1].controls[1].visible = False
         e.control.parent.parent.controls[0].controls[1].controls[2].visible = True
+        e.control.parent.parent.controls[0].controls[1].controls[3].visible = False
+    elif textButton == "Semántico":
+        TITLE.value = "Analizador Semántico"
+        TITLE.update()
+        e.control.parent.parent.controls[0].controls[1].controls[1].visible = False
+        e.control.parent.parent.controls[0].controls[1].controls[2].visible = False
+        e.control.parent.parent.controls[0].controls[1].controls[3].visible = True
     else:
         return
     e.control.parent.parent.controls[0].controls[1].update()

@@ -1,6 +1,7 @@
 import flet as ft
 from components.lexer import listview
 from components.parser import parserLayout
+from components.interpreter import interpreterOutput
 from components.globals import textpad, button, TITLE
 from functions.general import clear, textPadClear, abrir_archivo, ejecucion
 
@@ -21,6 +22,7 @@ def mainLayout(page: ft.Page):
                     textpad(page, lambda _: clear(page)),
                     listview(True),
                     parserLayout(False),
+                    interpreterOutput(False),
                 ],
                 scroll= ft.ScrollMode.AUTO,
                 height=600
