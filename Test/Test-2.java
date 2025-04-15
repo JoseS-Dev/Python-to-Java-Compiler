@@ -1,6 +1,6 @@
  public static void main(String args) {
-        double contador = 1.1;
-        String[] nomes = { "if", "else", "for", "while", "switch", "case", "break", "continue" };
+        doubl contador = 1.1;
+        Strin[] nomes = { "if", "else", "for", "while", "switch", "case", "break", "continue" };
         int a = 5;
         int b = 10;
         int resultadoSoma = a + b;

@@ -1,5 +1,5 @@
 public class MyClass {
-    int a = 5;
-    a++;
-    --a;
+    int variable = 5;
+    variable++;
+    --variable;
 }

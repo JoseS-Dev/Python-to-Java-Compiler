@@ -5,6 +5,7 @@ import sintaxis as SA
 precedence = (
     ('left', 'EQUAL','MINUS_EQ','TIMES_EQ','PLUS_EQ','DIVIDE_EQ','MOD_EQ','BITWISE_AND_EQ','BITWISE_OR_EQ','BITWISE_XOR_EQ','URSHIFT_EQ','LSHIFT_EQ','RSHIFT_EQ'),
     ('left','OR'),
+    ('left', 'STATIC','FINAL','ABSTRACT','PACKAGE'),
     ('left','AND'),
     ('left','BITWISE_OR'),
     ('left','BITWISE_XOR'),
@@ -71,6 +72,16 @@ def p_classmodifier_package(p):
     '''classmodifier : PACKAGE'''
     p[0] = SA.ClassModifierConcrete(p[1])
 
+def p_classmodifier_static(p):
+    '''classmodifier : STATIC'''
+    p[0] = SA.ClassModifierConcrete(p[1])
+
+def p_classmodifer_void(p):
+    '''classmodifier : VOID'''
+    p[0] = SA.ClassModifierConcrete(p[1])
+
+
+
 #Miembros
 def p_membros(p):
     '''membros : membro'''
@@ -95,6 +106,8 @@ def p_membrofunction(p):
 def p_atribute(p):
     '''atribute : visibility atributemodifier type ID SEMICOLON'''
     p[0] = SA.AtributeDefault(p[1], p[2], p[3], p[4])
+    p[0].lineno = p.lineno(1)
+    return p[0]
 
 def p_atribute_inicialized_type(p):
     '''atribute : visibility atributemodifier type ID EQUAL expression SEMICOLON'''
@@ -531,6 +544,8 @@ def p_expression_chav_expression_uni(p):
 def p_expression_chav_expression_comma(p):
     '''expression_chav :  expression COMMA RCHAV'''
     p[0] = SA.ExpressionChavComma(p[1])
+
+
 
 def p_error(p):
     if p:
