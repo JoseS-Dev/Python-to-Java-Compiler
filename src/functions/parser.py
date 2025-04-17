@@ -1,6 +1,5 @@
 from functions.lexer import *
 import ply.yacc as yacc
-import functions.sintaxis as SA
 import io
 import sys
 import matplotlib.pyplot as plt
