@@ -1,566 +1,661 @@
-from AnalizadorLexico import *
 import ply.yacc as yacc
-import sintaxis as SA
+from AnalizadorLexico import tokens, lexer
+import matplotlib.pyplot as plt
 
+# Precedencia de operadores
 precedence = (
-    ('left', 'EQUAL','MINUS_EQ','TIMES_EQ','PLUS_EQ','DIVIDE_EQ','MOD_EQ','BITWISE_AND_EQ','BITWISE_OR_EQ','BITWISE_XOR_EQ','URSHIFT_EQ','LSHIFT_EQ','RSHIFT_EQ'),
-    ('left','OR'),
-    ('left', 'STATIC','FINAL','ABSTRACT','PACKAGE'),
-    ('left','AND'),
-    ('left','BITWISE_OR'),
-    ('left','BITWISE_XOR'),
-    ('left','BITWISE_AND'),
-    ('left','EQ','NEQ'),
-    ('left','LT','GT','LEQ','GEQ'),
-    ('left','LSHIFT','RSHIFT','URSHIFT'),
-    ('left','PLUS','MINUS'),
-    ('left','TIMES','DIVIDE','MODULE'),
-    ('left','LINCREMENT','LDECREMENT','UPLUS','UMINUS','NOT'),
-    ('left','RINCREMENT','RDECREMENT'),
+    ('nonassoc', 'IF', 'ELSE'),
+    ('left', 'OR_LOGICO'),
+    ('left', 'AND_LOGICO'),
+    ('left', 'OR_BIT'),
+    ('left', 'XOR_BIT'),
+    ('left', 'AND_BIT'),
+    ('left', 'IGUAL', 'DISTINTO'),
+    ('nonassoc', 'MENOR', 'MAYOR', 'MENOR_IGUAL', 'MAYOR_IGUAL', 'INSTANCEOF'),
+    ('left', 'DESPLAZAMIENTO_IZQUIERDO', 'DESPLAZAMIENTO_DERECHO'),
+    ('left', 'SUMA', 'RESTA'),
+    ('left', 'MULTIPLICACION', 'DIVISION', 'MODULO'),
+    ('right', 'UMENOS', 'UMAS' ,'NOT', 'NOT_BIT'),
+    ('right', 'INCREMENTO', 'DECREMENTO'),
+    ('left', 'PUNTO'),
+    ('left', 'CORCHETE_ABIERTO'),
+    ('right', 'CORCHETE_CERRADO'),
+    ('right', 'TERNARIO', 'DOSPUNTOS'),
 )
 
 def p_program(p):
-    ''' program : class '''
-    p[0] = SA.ProgramConcrete(p[1])
+    '''program : package_decl import_decls class_decls
+              | import_decls class_decls
+              | class_decls'''
+    if len(p) == 4:
+        p[0] = ('program', p[1], p[2], p[3])
+    elif len(p) == 3:
+        p[0] = ('program', None, p[1], p[2])
+    else:
+        p[0] = ('program', None, None, p[1])
+
+def p_package_decl(p):
+    'package_decl : PACKAGE qualified_id PUNTO_Y_COMA'
+    p[0] = ('package', p[2])
+
+def p_import_decls(p):
+    '''import_decls : import_decl import_decls
+                   | import_decl'''
+    if len(p) == 3:
+        p[0] = [p[1]] + p[2]
+    else:
+        p[0] = [p[1]]
+
+def p_import_decl(p):
+    'import_decl : IMPORT qualified_id PUNTO_Y_COMA'
+    p[0] = ('import', p[2])
+
+def p_class_decls(p):
+    '''class_decls : class_decl class_decls
+                  | class_decl'''
+    if len(p) == 3:
+        p[0] = [p[1]] + p[2]
+    else:
+        p[0] = [p[1]]
+
+def p_class_decl(p):
+    'class_decl : class_header LLAVE_ABIERTA class_body LLAVE_CERRADA'
+    p[0] = ('class', p[1], p[3])
+
+def p_class_header(p):
+    '''class_header : modifiers CLASS ID extends_clause implements_clause
+                   | CLASS ID extends_clause implements_clause'''
+    if len(p) == 6:
+        p[0] = ('class_header', p[1], p[3], p[4], p[5])
+    else:
+        p[0] = ('class_header', None, p[2], p[3], p[4])
+
+def p_extends_clause(p):
+    '''extends_clause : EXTENDS qualified_id
+                     | empty'''
+    p[0] = ('extends', p[2]) if len(p) == 3 else None
+
+def p_implements_clause(p):
+    '''implements_clause : IMPLEMENTS qualified_id_list
+                        | empty'''
+    p[0] = ('implements', p[2]) if len(p) == 3 else None
+
+def p_class_body(p):
+    'class_body : class_members'
+    p[0] = p[1]
+
+def p_class_members(p):
+    '''class_members : class_member class_members
+                    | empty'''
+    if len(p) == 3 and p[2]:
+        p[0] = [p[1]] + p[2]
+    elif len(p) == 3:
+        p[0] = [p[1]]
+    else:
+        p[0] = []
+
+def p_class_member(p):
+    '''class_member : field_decl
+                   | method_decl
+                   | constructor_decl
+                   | class_decl'''
+    p[0] = ('member', p[1])
+
+def p_field_decl(p):
+    'field_decl : modifiers type variables PUNTO_Y_COMA'
+    p[0] = ('field', p[1], p[2], p[3])
+
+def p_variables(p):
+    '''variables : variable COMA variables
+                | variable'''
+    if len(p) == 4:
+        p[0] = [p[1]] + p[3]
+    else:
+        p[0] = [p[1]]
+
+def p_variable(p):
+    '''variable : ID
+               | ID ASIGNACION expression'''
+    if len(p) == 2:
+        p[0] = ('variable', p[1], None)
+    else:
+        p[0] = ('variable', p[1], p[3])
+
+def p_method_decl(p):
+    'method_decl : method_header block'
+    p[0] = ('method', p[1], p[2])
+
+def p_method_header(p):
+    '''method_header : modifiers type ID PARENTESIS_ABIERTO formal_params PARENTESIS_CERRADO
+                    | modifiers VOID ID PARENTESIS_ABIERTO formal_params PARENTESIS_CERRADO
+                    | modifiers type ID PARENTESIS_ABIERTO PARENTESIS_CERRADO
+                    | modifiers VOID ID PARENTESIS_ABIERTO PARENTESIS_CERRADO'''
+    if len(p) == 7:
+        p[0] = ('method_header', p[1], p[2], p[3], p[5])
+    else:
+        p[0] = ('method_header', p[1], p[2], p[3], [])
+
+def p_method_call(p):
+    '''method_call : ID PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO
+                  | THIS PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO
+                  | SUPER PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO
+                  | NEW creator PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO'''
+    p[0] = ('method_call', p[1], p[3])
+
+def p_formal_params(p):
+    '''formal_params : formal_param COMA formal_params
+                    | formal_param
+                    | empty'''
+    if len(p) == 4:
+        p[0] = [p[1]] + p[3]
+    elif len(p) == 2:
+        p[0] = [p[1]] if p[1] is not None else []
+    else:
+        p[0] = []
+
+def p_formal_param(p):
+    '''formal_param : type ID
+                   | array_type ID'''
+    p[0] = ('param', p[1], p[2])
+
+def p_array_type(p):
+    '''array_type : primitive_type CORCHETE_ABIERTO CORCHETE_CERRADO
+                 | reference_type CORCHETE_ABIERTO CORCHETE_CERRADO'''
+    p[0] = ('array_type', p[1])
+
+def p_constructor_decl(p):
+    'constructor_decl : modifiers ID PARENTESIS_ABIERTO formal_params PARENTESIS_CERRADO block'
+    p[0] = ('constructor', p[1], p[2], p[4], p[6])
+
+def p_block(p):
+    '''block : LLAVE_ABIERTA statements LLAVE_CERRADA
+             | LLAVE_ABIERTA LLAVE_CERRADA'''
+    if len(p) == 4:
+        p[0] = ('block', p[2])
+    else:
+        p[0] = ('block', [])
+
+def p_statements(p):
+    '''statements : statement statements
+                 | empty'''
+    if len(p) == 3 and p[2]:
+        p[0] = [p[1]] + p[2]
+    elif len(p) == 3:
+        p[0] = [p[1]]
+    else:
+        p[0] = []
+
+def p_statement(p):
+    '''statement : block
+                | WHILE PARENTESIS_ABIERTO expression PARENTESIS_CERRADO statement
+                | DO statement WHILE PARENTESIS_ABIERTO expression PARENTESIS_CERRADO PUNTO_Y_COMA
+                | FOR PARENTESIS_ABIERTO for_init PUNTO_Y_COMA expression PUNTO_Y_COMA for_update PARENTESIS_CERRADO statement
+                | SWITCH PARENTESIS_ABIERTO expression PARENTESIS_CERRADO LLAVE_ABIERTA switch_cases LLAVE_CERRADA
+                | RETURN expression PUNTO_Y_COMA
+                | RETURN PUNTO_Y_COMA
+                | BREAK PUNTO_Y_COMA
+                | CONTINUE PUNTO_Y_COMA
+                | THROW expression PUNTO_Y_COMA
+                | TRY block catches
+                | ASSERT expression PUNTO_Y_COMA
+                | TRY block catches FINALLY block
+                | expression PUNTO_Y_COMA
+                | local_var_decl PUNTO_Y_COMA
+                | PUNTO_Y_COMA'''
+    # Manejo simplificado para el ejemplo
+    if len(p) == 2:
+        p[0] = ('statement', p[1])
+    elif p[1] == 'if' and len(p) == 6:
+        p[0] = ('if', p[3], p[5])
+    elif p[1] == 'if' and len(p) == 8:
+        p[0] = ('if-else', p[3], p[5], p[7])
+    elif p[1] == 'while':
+        p[0] = ('while', p[3], p[5])
+    elif p[1] == 'do':
+        p[0] = ('do-while', p[2], p[5])
+    elif p[1] == 'for':
+        p[0] = ('for', p[3], p[5], p[7], p[9])
+    elif p[1] == 'switch':
+        p[0] = ('switch', p[3], p[6])
+    elif p[1] in ('return', 'break', 'continue', 'throw'):
+        p[0] = (p[1], p[2] if len(p) == 4 else None)
+    elif p[1] == 'try' and len(p) == 4:
+        p[0] = ('try-catch', p[2], p[3])
+    elif p[1] == 'try' and len(p) == 6:
+        p[0] = ('try-catch-finally', p[2], p[3], p[5])
+    else:
+        p[0] = ('expr-statement', p[1])
+
+def p_for_init(p):
+    '''for_init : local_var_decl
+               | expression_list'''
+    p[0] = ('for_init', p[1])
+
+def p_for_update(p):
+    'for_update : expression_list'
+    p[0] = ('for_update', p[1])
+
+def p_expression_list(p):
+    '''expression_list : expression
+                      | expression COMA expression_list'''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = [p[1]] + p[3]
+
+def p_switch_cases(p):
+    '''switch_cases : switch_case switch_cases
+                   | switch_case'''
+    if len(p) == 3:
+        p[0] = [p[1]] + p[2]
+    else:
+        p[0] = [p[1]]
+
+def p_switch_case(p):
+    '''switch_case : CASE expression DOSPUNTOS statements
+                  | DEFAULT DOSPUNTOS statements'''
+    if p[1] == 'case':
+        p[0] = ('case', p[2], p[4])
+    else:
+        p[0] = ('default', p[3])
+
+def p_catches(p):
+    '''catches : catch catches
+              | catch'''
+    if len(p) == 3:
+        p[0] = [p[1]] + p[2]
+    else:
+        p[0] = [p[1]]
+
+def p_catch(p):
+    'catch : CATCH PARENTESIS_ABIERTO formal_param PARENTESIS_CERRADO block'
+    p[0] = ('catch', p[3], p[5])
+
+def p_local_var_decl(p):
+    'local_var_decl : type variables'
+    p[0] = ('local_var', p[1], p[2])
 
-#CLASS
-def p_class_extends(p):
-    '''class : visibility classmodifier CLASS ID EXTENDS ID LCHAV membros RCHAV'''
-    p[0] = SA.CClassExtends(p[1], p[2], p[4], p[6], p[8])
-
-def p_class_default(p):
-    '''class : visibility classmodifier CLASS ID LCHAV membros RCHAV'''
-    p[0] = SA.CClassDefault(p[1], p[2], p[4], p[6])
-
-def p_class_implements(p):
-    ''' class : visibility classmodifier CLASS ID IMPLEMENTS LCHAV membros RCHAV '''
-    p[0] = SA.CClassImplements(p[1], p[2], p[4], p[7])
-
-
-#VISIBILIDAD
-def p_visibility_public(p):
-    '''visibility : PUBLIC '''
-    p[0] = SA.VisibilityConcrete(p[1])
-
-def p_visibility_private(p):
-    '''visibility : PRIVATE '''
-    p[0] = SA.VisibilityConcrete(p[1])
-
-def p_visibility_protected(p):  
-    '''visibility : PROTECTED '''
-    p[0] = SA.VisibilityConcrete(p[1])
-
-def p_visibility_default(p):
-    '''visibility : '''
-    p[0] = SA.VisibilityConcrete(None)
-
-
-#Modificadorclase
-def p_classmodifier_default(p):
-    '''classmodifier : '''
-    p[0] = SA.ClassModifierConcrete(None)
-
-def p_classmodifier_abstract(p):
-    '''classmodifier : ABSTRACT'''
-    p[0] = SA.ClassModifierConcrete(p[1])
-
-def p_classmodifier_final(p):
-    '''classmodifier : FINAL'''
-    p[0] = SA.ClassModifierConcrete(p[1])
-
-def p_classmodifier_package(p):
-    '''classmodifier : PACKAGE'''
-    p[0] = SA.ClassModifierConcrete(p[1])
-
-def p_classmodifier_static(p):
-    '''classmodifier : STATIC'''
-    p[0] = SA.ClassModifierConcrete(p[1])
-
-def p_classmodifer_void(p):
-    '''classmodifier : VOID'''
-    p[0] = SA.ClassModifierConcrete(p[1])
-
-
-
-#Miembros
-def p_membros(p):
-    '''membros : membro'''
-    p[0] = SA.MembrosUni(p[1])
-
-def p_multimembros(p):
-    '''membros : membro membros'''
-    p[0] = SA.MembrosMult(p[1], p[2])
-
-#Miembro
-def p_membro_atribute(p):
-    '''membro : atribute'''
-    p[0] = SA.MembroAtribute(p[1])
-
-def p_membrofunction(p):
-    '''membro : function'''    
-    p[0] = SA.MembroFunction(p[1])
-
-
-
-#ATRIBUTOS
-def p_atribute(p):
-    '''atribute : visibility atributemodifier type ID SEMICOLON'''
-    p[0] = SA.AtributeDefault(p[1], p[2], p[3], p[4])
-    p[0].lineno = p.lineno(1)
-    return p[0]
-
-def p_atribute_inicialized_type(p):
-    '''atribute : visibility atributemodifier type ID EQUAL expression SEMICOLON'''
-    p[0] = SA.AtributeDefaultInicializedType(p[1], p[2], p[3], p[4], p[6])
-
-
-
-
-#Modificadoratributo
-def p_atributemodifier_default(p):
-    '''atributemodifier : '''
-    p[0] = SA.AtributeModifierConcrete(None)
-
-def p_atributemodifier_static(p):
-    '''atributemodifier : STATIC'''
-    p[0] = SA.AtributeModifierConcrete(p[1])
-
-
-def p_atributemodifier_final(p):
-    '''atributemodifier : FINAL'''
-    p[0] = SA.AtributeModifierConcrete(p[1])
-
-
-#Funciones
-def p_function(p):
-    '''function : signature body'''
-    p[0] = SA.FunctionDefault(p[1], p[2])
-
-#SIGNATURE
-def p_signature_simple(p):
-    '''signature : visibility atributemodifier type ID LPAREN sigparams RPAREN '''
-    p[0] = SA.SignatureSimple(p[1], p[2], p[3], p[4], p[6])
-
-def p_signature_list(p):
-    '''signature : visibility atributemodifier type brackets_expression ID LPAREN sigparams RPAREN '''
-    p[0] = SA.SignatureMult(p[1], p[2], p[3], p[4], p[5], p[7])
-
-#SIGPARAMS
-def p_sigparams_id(p):
-    '''sigparams : type ID  '''
-    p[0] = SA.SigparamsId(p[1], p[2])
-
-def p_sigparams_sigparams(p):
-    '''sigparams : type ID COMMA sigparams'''
-    p[0] = SA.SigparamsSigparams(p[1], p[2], p[4])
-
-#BODY
-def p_body(p):
-    '''body : LCHAV stms RCHAV'''
-    p[0] = SA.BodyStms(p[2])
-
-
-#STMS
-def p_stms(p):
-    '''stms : stm '''
-    p[0] = SA.StmsUni(p[1])
-
-def p_multistms(p):
-    '''stms : stm stms '''
-    p[0] = SA.StmsMulti(p[1], p[2])
-
-
-#STM
-def p_stm_exp(p):
-    '''stm : expression SEMICOLON'''
-    p[0] = SA.StmExpression(p[1])
-
-def p_stm_while(p):
-    '''stm : WHILE LPAREN expression RPAREN bodyorstm'''
-    p[0] = SA.StmExpressionWhile(p[3], p[5])
-
-def p_stm_dowhile(p):
-    '''stm : DO bodyorstm WHILE LPAREN expression RPAREN SEMICOLON '''
-    p[0] = SA.StmExpressionDoWhile(p[2], p[5])
-
-def p_stm_for(p):
-    '''stm : FOR LPAREN expression_for SEMICOLON expression SEMICOLON expression RPAREN bodyorstm'''
-    p[0] = SA.StmExpressionFor(p[3], p[5], p[7], p[9])
-
-def p_stm_if(p):
-    '''stm : IF LPAREN expression RPAREN bodyorstm'''
-    p[0] = SA.StmExpressionIf(p[3], p[5])
-
-def p_stm_ifelse(p):
-    '''stm : IF LPAREN expression RPAREN bodyorstm ELSE bodyorstm'''
-    p[0] = SA.StmExpressionIfElse(p[3], p[5], p[7])
-
-def p_stm_elseif(p):
-    '''stm : IF LPAREN expression RPAREN bodyorstm ELSE IF bodyorstm'''
-    p[0] = SA.StmExpressionElseIf(p[3], p[5], p[8])
-
-def p_stm_semicollon(p):
-    '''stm : SEMICOLON '''
-    p[0] = SA.StmExpressionSemicolon(None)
-
-def p_stm_variable(p):
-    '''stm : atributemodifier type ID SEMICOLON'''
-    p[0] = SA.StmExpressionVariable(p[1], p[2], p[3])
-
-def p_stm_variable_type(p):
-    '''stm : atributemodifier type ID EQUAL expression SEMICOLON'''
-    p[0] = SA.StmExpressionVariableType(p[1], p[2], p[3], p[5])
-    
-
-def p_stm_variable_type_list(p):
-    '''stm : atributemodifier type ID LBRACKET RBRACKET SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeList(p[1], p[2], p[3])
-
-def p_stm_variable_type_list_pre(p):
-    '''stm : atributemodifier type LBRACKET RBRACKET ID SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeListPre(p[1], p[2], p[5])	
-
-def p_stm_variable_type_list_list_pre(p):
-    '''stm : atributemodifier type LBRACKET RBRACKET ID EQUAL chav_exp SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeListListPre(p[1], p[2], p[5], p[7])
-
-def p_stm_variable_type_list_expression(p):
-    '''stm : atributemodifier type ID LBRACKET RBRACKET EQUAL expression SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeListExpression(p[1], p[2], p[3], p[7])
-
-def p_stm_variable_type_list_expression_inicialized(p):
-    '''stm : atributemodifier type ID LBRACKET RBRACKET EQUAL chav_exp SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeListExpressionInicialized(p[1], p[2], p[3], p[7])
-
-def p_stm_variable_type_list_list(p):
-    '''stm : atributemodifier type LBRACKET RBRACKET ID LBRACKET RBRACKET SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeListList(p[1], p[2], p[5])
-
-def p_stm_variable_type_list_list_inicialized(p):
-    '''stm : atributemodifier type LBRACKET RBRACKET ID LBRACKET RBRACKET EQUAL chav_exp SEMICOLON'''
-    p[0] = SA.StmExpressionVariableTypeListListInicialized(p[1], p[2], p[5], p[9])
-
-
-
-def p_stm_return(p):
-    '''stm : RETURN expression SEMICOLON'''
-    p[0] = SA.StmExpressionReturn(p[2])
-
-def p_stm_void_return(p):
-    '''stm : RETURN SEMICOLON'''
-    p[0] = SA.StmExpressionVoidReturn(None)
-    
-    
-#BODYORSTM
-def p_bodyorstm_body(p):
-    '''bodyorstm : body'''
-    p[0] = SA.BodyOrStmBody(p[1])
-
-
-#EXPRESSIONFOR
-def p_expression_assign_for_type(p):
-    ''' expression_for : type ID EQUAL expression  '''
-    p[0] = SA.ExpressionForAssignForType(p[1], p[2], p[4])
-
-def p_expression_assign_for(p):
-    ''' expression_for : ID EQUAL expression  '''
-    p[0] = SA.ExpressionForAssignFor(p[1], p[3])
-
-
-#EXPRESSÕES
-def p_expression_operator(p):
-    ''' expression : operator '''
-    p[0] = SA.ExpressionOperator(p[1])
-
-def p_expression_call(p):
-    ''' expression : call '''
-    p[0] = SA.ExpressionCall(p[1])
-
-def p_expression_FLOAT_NUMBER(p):
-    ''' expression : FLOAT_NUMBER '''
-    p[0] = SA.ExpressionFloatNumber(p[1])
-
-def p_expression_DOUBLE_NUMBER(p):
-    ''' expression : DOUBLE_NUMBER '''
-    p[0] = SA.ExpressionDoubleNumber(p[1])
-
-def p_expression_INT_NUMBER(p):
-    ''' expression : INT_NUMBER '''
-    p[0] = SA.ExpressionIntNumber(p[1])
-
-def p_expression_STRING(p):
-    ''' expression : STRING '''
-    p[0] = SA.ExpressionString(p[1])
-
-def p_expression_ID (p):
-    ''' expression : ID  '''
-    p[0] = SA.ExpressionId(p[1])
-
-def p_expression_new(p):
-    '''expression : NEW type LPAREN params_call RPAREN '''
-    p[0] = SA.ExpressionNew(p[2], p[4])
-
-def p_expression_new_list(p):
-    '''expression : NEW type LBRACKET expression RBRACKET '''
-    p[0] = SA.ExpressionNewList(p[2], p[4])
-
-
-
-#OPERADORES
-def p_operator_arithmetic_times(p):
-    '''operator : expression TIMES expression'''
-    p[0] = SA.OperatorArithmeticTimes(p[1], p[3])
-
-def p_operator_arithmetic_divide(p):
-    '''operator : expression DIVIDE expression'''
-    p[0] = SA.OperatorArithmeticDivide(p[1], p[3])
-
-def p_operator_arithmetic_module(p):
-    '''operator : expression MODULE expression'''
-    p[0] = SA.OperatorArithmeticModule(p[1], p[3])
-
-def p_operator_arithmetic_plus(p):
-    '''operator : expression PLUS expression'''
-    p[0] = SA.OperatorArithmeticPlus(p[1], p[3])
-
-def p_operator_arithmetic_minus(p):
-    '''operator : expression MINUS expression'''
-    p[0] = SA.OperatorArithmeticMinus(p[1], p[3])
-
-def p_operator_assign_EQUAL(p):
-    '''operator : ID EQUAL expression'''
-    p[0] = SA.OperatorAssignEqual(p[1], p[3])
-
-def p_operator_assign_MINUS_EQ(p):
-    '''operator : ID MINUS_EQ expression'''
-    p[0] = SA.OperatorAssignMinusEQ(p[1], p[3])
-
-def p_operator_assign_TIMES_EQ(p):
-    '''operator : ID TIMES_EQ expression'''
-    p[0] = SA.OperatorAssignTimesEQ(p[1], p[3])
-
-def p_operator_assign_PLUS_EQ(p):
-    '''operator : ID PLUS_EQ expression'''
-    p[0] = SA.OperatorAssignPlusEQ(p[1], p[3])
-
-def p_operator_assign_DIVIDE_EQ(p):
-    '''operator : ID DIVIDE_EQ expression'''
-    p[0] = SA.OperatorAssignDivideEQ(p[1], p[3])
-
-def p_operator_assign_MOD_EQ(p):
-    '''operator : ID MOD_EQ expression'''
-    p[0] = SA.OperatorAssignModuleEQ(p[1], p[3])
-
-def p_operator_assign_BITWISE_AND_EQ(p):
-    '''operator : ID BITWISE_AND_EQ expression'''
-    p[0] = SA.OperatorAssignBitwiseAndEQ(p[1], p[3])
-
-def p_operator_assign_BITWISE_OR_EQ(p):
-    '''operator : ID BITWISE_OR_EQ expression'''
-    p[0] = SA.OperatorAssignBitwiseOrEQ(p[1], p[3])
-
-def p_operator_assign_BITWISE_XOR_EQ(p):
-    '''operator : ID BITWISE_XOR_EQ expression'''
-    p[0] = SA.OperatorAssignBitwiseXorEQ(p[1], p[3])
-
-def p_operator_assign_URSHIFT_EQ(p):
-    '''operator : ID URSHIFT_EQ expression'''
-    p[0] = SA.OperatorAssignUrshiftEQ(p[1], p[3])
-
-def p_operator_assign_LSHIFT_EQ(p):
-    '''operator : ID LSHIFT_EQ expression'''
-    p[0] = SA.OperatorAssignLshiftEQ(p[1], p[3])
-
-def p_operator_assign_RSHIFT_EQ(p):
-    '''operator : ID RSHIFT_EQ expression'''
-    p[0] = SA.OperatorAssignRshiftEQ(p[1], p[3])
-
-def p_operator_comparator_LEQ(p):
-    '''operator : expression LEQ expression'''
-    p[0] = SA.OperatorComparatorLeq(p[1], p[3])
-
-def p_operator_comparator_GEQ(p):
-    '''operator : expression GEQ expression'''
-    p[0] = SA.OperatorComparatorGeq(p[1], p[3])
-
-def p_operator_comparator_LT(p):
-    '''operator : expression LT expression'''
-    p[0] = SA.OperatorComparatorLt(p[1], p[3])
-
-def p_operator_comparator_GT(p):
-    '''operator : expression GT expression'''
-    p[0] = SA.OperatorComparatorGt(p[1], p[3])
-
-def p_operator_comparator_NEQ(p):
-    '''operator : expression NEQ expression'''
-    p[0] = SA.OperatorComparatorNeq(p[1], p[3])
-
-def p_operator_comparator_EQ(p):
-    '''operator : expression EQ expression'''
-    p[0] = SA.OperatorComparatorEq(p[1], p[3])
-
-def p_operator_comparator_AND(p):
-    '''operator : expression AND expression'''
-    p[0] = SA.OperatorComparatorAnd(p[1], p[3])
-
-def p_operator_comparator_OR(p):
-    '''operator : expression OR expression'''
-    p[0] = SA.OperatorComparatorOr(p[1], p[3])
-
-def p_operator_comparator_BITWISE_AND(p):
-    '''operator : expression BITWISE_AND expression'''
-    p[0] = SA.OperatorComparatorBitwise_And(p[1], p[3])
-
-def p_operator_comparator_BITWISE_OR(p):
-    '''operator : expression BITWISE_OR expression'''
-    p[0] = SA.OperatorComparatorBitwise_OR(p[1], p[3])
-
-def p_operator_comparator_BITWISE_XOR(p):
-    '''operator : expression BITWISE_XOR expression'''
-    p[0] = SA.OperatorComparatorBitwise_XOR(p[1], p[3])
-
-def p_operator_unaryoperatorprefx(p):
-    '''operator : unaryoperatorprefx ID'''
-    p[0] = SA.OperatorUnaryPrefix(p[1], p[2])
-
-def p_operator_unaryoperatorsufx(p):
-    '''operator : ID unaryoperatorsufx'''
-    p[0] = SA.OperatorUnarySufix(p[1], p[2])
-
-def p_operator_operatorbittobit(p):
-    '''operator : expression operatorbittobit'''
-    p[0] = SA.OperatorBitToBit(p[1], p[2])
-
-
-#UNARYOPERATORPREFIX
-def p_unaryoperatorprefx(p):
-    '''
-    unaryoperatorprefx : INCREMENT %prec LINCREMENT
-                        | DECREMENT %prec LDECREMENT
-                        | MINUS %prec UMINUS
-                        | PLUS %prec UPLUS
-                        | NOT
-    '''
-    p[0] = SA.UnaryOperatorPrefixConcrete(p[1])
-
-#UNARYOPERATORSUFIX
-def p_unaryoperatorsufx(p):
-    '''
-    unaryoperatorsufx : INCREMENT %prec RINCREMENT
-                        | DECREMENT %prec RDECREMENT
-    '''
-    p[0] = SA.UnaryOperatorSufixConcrete(p[1])
-
-
-
-#UNARYOPERATORBITTOBIT
-def p_operatorbittobit(p):
-    '''
-    operatorbittobit : URSHIFT
-                        | LSHIFT
-                        | RSHIFT
-    
-    '''
-    p[0] = SA.UnaryOperatorBitToBitConcrete(p[1])
-
-
-#BRACKETSEXPRESSION
-def p_brackets_expression_default(p):
-    ''' brackets_expression : LBRACKET RBRACKET'''
-    p[0] = SA.BracketsExpressionSimple(None)
-
-def p_brackets_expression_int(p):
-    ''' brackets_expression : LBRACKET INT_NUMBER RBRACKET'''
-    p[0] = SA.BracketsExpressionIntNumber(p[2])
-
-
-def p_brackets_expression_id(p):
-    ''' brackets_expression : LBRACKET ID RBRACKET'''
-    p[0] = SA.BracketsExpressionId(p[2])
-
-
-
-#TIPOS PRIMITIVOS
 def p_type(p):
-    ''' type : primitivetypes
-               '''
-    p[0] = SA.TypePrimitive(p[1])
+    '''type : primitive_type
+           | reference_type'''
+    p[0] = ('type', p[1])
 
+def p_primitive_type(p):
+    '''primitive_type : INT
+                     | FLOAT
+                     | DOUBLE
+                     | CHAR
+                     | BOOLEAN
+                     | SHORT
+                     | LONG
+                     | STRING
+                     | BYTE'''
+    p[0] = ('primitive', p[1])
 
-def p_primitivetypes(p):
-    '''primitivetypes : TYPE_INT
-                        | TYPE_FLOAT
-                        | TYPE_DOUBLE
-                        | TYPE_BYTE
-                        | TYPE_BOOLEAN
-                        | TYPE_CHAR
-                        | TYPE_STRING
-                        | TYPE_LONG
-                        | TYPE_VOID
+def p_reference_type(p):
+    'reference_type : qualified_id'
+    p[0] = ('reference', p[1])
 
-    '''
-    p[0] = SA.PrimitiveTypesConcrete(p[1])
+def p_qualified_id(p):
+    '''qualified_id : ID PUNTO ID
+                   | ID'''
+    if len(p) == 4:
+        p[0] = ('qualified', p[1], p[3])
+    else:
+        p[0] = ('id', p[1])
 
+def p_qualified_id_list(p):
+    '''qualified_id_list : qualified_id COMA qualified_id_list
+                        | qualified_id'''
+    if len(p) == 4:
+        p[0] = [p[1]] + p[3]
+    else:
+        p[0] = [p[1]]
 
+def p_expression(p):
+    '''expression : assignment_expression'''
+    p[0] = p[1]
 
-#CALL    
-def p_call(p):
-    ''' call : ID LPAREN params_call RPAREN'''
-    p[0] = SA.CallParams(p[1], p[3])
+def p_assignment_expression(p):
+    '''assignment_expression : conditional_expression
+                           | ID assignment_operator expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('assign', p[1], p[2], p[3])
 
-def p_call_default(p):
-    ''' call : ID LPAREN RPAREN'''
-    p[0] = SA.CallDefault(p[1])
+def p_assignment_operator(p):
+    '''assignment_operator : ASIGNACION
+                          | ASIGNACION_SUMA
+                          | ASIGNACION_RESTA
+                          | ASIGNACION_MULTIPLICACION
+                          | ASIGNACION_DIVISION
+                          | ASIGNACION_MODULO
+                          | DESPLAZAMIENTO_IZQUIERDO_ASIGNACION
+                          | DESPLAZAMIENTO_DERECHO_ASIGNACION'''
+    p[0] = ('assign_op', p[1])
 
-#PARAMSCALL
-def p_params_multi(p):
-    ''' params_call : expression COMMA params_call'''
-    p[0] = SA.ParamsCallMulti(p[1], p[3])
+def p_conditional_expression(p):
+    '''conditional_expression : logical_or_expression
+                             | logical_or_expression TERNARIO expression DOSPUNTOS conditional_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('ternary', p[1], p[3], p[5])
 
-def p_params_unique(p):
-    ''' params_call : expression'''
-    p[0] = SA.ParamsCallUnique(p[1])
+def p_logical_or_expression(p):
+    '''logical_or_expression : logical_and_expression
+                            | logical_or_expression OR_LOGICO logical_and_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
 
-#CHAV_EMPTY
-def p_chav_exp(p):
-    '''chav_exp : LCHAV RCHAV'''
-    p[0] = SA.ChavExpEmpty(None)
+def p_logical_and_expression(p):
+    '''logical_and_expression : inclusive_or_expression
+                             | logical_and_expression AND_LOGICO inclusive_or_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
 
-def p_chav_exp_expchav(p):
-    '''chav_exp : LCHAV expression_chav
-    '''
-    p[0] = SA.ChavExpExpressionChav(p[2])
+def p_inclusive_or_expression(p):
+    '''inclusive_or_expression : exclusive_or_expression
+                              | inclusive_or_expression OR_BIT exclusive_or_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
 
+def p_exclusive_or_expression(p):
+    '''exclusive_or_expression : and_expression
+                              | exclusive_or_expression XOR_BIT and_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
 
-#EXPRESSION_CHAV
-def p_expression_chav_mult(p):
-    '''expression_chav : expression COMMA expression_chav'''
-    p[0] = SA.ExpressionChavMult(p[1], p[3])
+def p_and_expression(p):
+    '''and_expression : equality_expression
+                      | and_expression AND_BIT equality_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
 
-def p_expression_chav_expression_uni(p):
-    '''expression_chav : expression RCHAV'''
-    p[0] = SA.ExpressionChavUni(p[1])
+def p_equality_expression(p):
+    '''equality_expression : relational_expression
+                          | equality_expression IGUAL relational_expression
+                          | equality_expression DISTINTO relational_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
 
-def p_expression_chav_expression_comma(p):
-    '''expression_chav :  expression COMMA RCHAV'''
-    p[0] = SA.ExpressionChavComma(p[1])
+def p_relational_expression(p):
+    '''relational_expression : shift_expression
+                            | relational_expression MENOR shift_expression
+                            | relational_expression MAYOR shift_expression
+                            | relational_expression MENOR_IGUAL shift_expression
+                            | relational_expression MAYOR_IGUAL shift_expression
+                            | relational_expression INSTANCEOF reference_type'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
 
+def p_shift_expression(p):
+    '''shift_expression : additive_expression
+                       | shift_expression DESPLAZAMIENTO_IZQUIERDO additive_expression
+                       | shift_expression DESPLAZAMIENTO_DERECHO additive_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
 
+def p_additive_expression(p):
+    '''additive_expression : multiplicative_expression
+                          | additive_expression SUMA multiplicative_expression
+                          | additive_expression RESTA multiplicative_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
+
+def p_multiplicative_expression(p):
+    '''multiplicative_expression : unary_expression
+                                | multiplicative_expression MULTIPLICACION unary_expression
+                                | multiplicative_expression DIVISION unary_expression
+                                | multiplicative_expression MODULO unary_expression'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('binary', p[2], p[1], p[3])
+
+def p_unary_expression(p):
+    '''unary_expression : postfix_expression
+                       | INCREMENTO unary_expression
+                       | DECREMENTO unary_expression
+                       | SUMA unary_expression
+                       | RESTA unary_expression
+                       | UMAS unary_expression
+                       | UMENOS unary_expression
+                       | NOT unary_expression
+                       | NOT_BIT unary_expression
+                       '''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('unary', p[1], p[2])
+
+def p_if_statement(p):
+    '''statement : IF PARENTESIS_ABIERTO expression PARENTESIS_CERRADO statement %prec IF
+                 | IF PARENTESIS_ABIERTO expression PARENTESIS_CERRADO statement ELSE statement'''
+    if len(p) == 6:
+        p[0] = ('if', p[3], p[5])
+    else:
+        p[0] = ('if-else', p[3], p[5], p[7])
+
+def p_postfix_expression(p):
+    '''postfix_expression : primary
+                         | postfix_expression INCREMENTO
+                         | postfix_expression DECREMENTO
+                         | postfix_expression PUNTO member_access %prec PUNTO
+                         | postfix_expression CORCHETE_ABIERTO expression CORCHETE_CERRADO'''
+    if len(p) == 2:
+        p[0] = p[1]
+    elif len(p) == 3:
+        p[0] = ('postfix', p[1], p[2])
+    elif p[2] == '[':
+        p[0] = ('array_access', p[1], p[3])
+    else:
+        p[0] = ('member_access', p[1], p[3])
+
+def p_member_access(p):
+    '''member_access : ID
+                    | THIS
+                    | SUPER
+                    | NEW creator
+                    | method_call'''
+    if len(p) == 2:
+        p[0] = ('member', p[1])
+    else:
+        p[0] = ('new_member', p[2])
+
+def p_primary(p):
+    '''primary : literal
+              | THIS
+              | SUPER
+              | PARENTESIS_ABIERTO expression PARENTESIS_CERRADO
+              | NEW creator
+              | qualified_id'''
+    if len(p) == 2:
+        p[0] = ('primary', p[1])
+    elif p[1] == '(':
+        p[0] = p[2]
+    elif p[1] == 'new':
+        p[0] = ('new', p[2])
+
+def p_literal(p):
+    '''literal : NUMERO
+              | CADENA
+              | TRUE
+              | FALSE
+              | NULL
+              | OCTAL_NUMERO
+              | HEX_NUMERO
+              | BINARIO_NUMERO'''
+    p[0] = ('literal', p[1])
+
+def p_creator(p):
+    '''creator : qualified_id PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO
+              | qualified_id CORCHETE_ABIERTO expression CORCHETE_CERRADO
+              | qualified_id CORCHETE_ABIERTO CORCHETE_CERRADO
+              | primitive_type CORCHETE_ABIERTO expression CORCHETE_CERRADO
+              | primitive_type CORCHETE_ABIERTO CORCHETE_CERRADO'''
+    if len(p) == 5:
+        p[0] = ('creator', p[1], p[3])
+    else:
+        p[0] = ('creator', p[1], None)
+
+def p_arguments(p):
+    '''arguments : expression_list
+                | empty'''
+    p[0] = ('args', p[1] if p[1] else [])
+
+def p_modifiers(p):
+    '''modifiers : modifier modifiers
+                | modifier'''
+    if len(p) == 3:
+        p[0] = [p[1]] + p[2]
+    else:
+        p[0] = [p[1]]
+
+def p_modifier(p):
+    '''modifier : PUBLIC
+               | PRIVATE
+               | PROTECTED
+               | STATIC
+               | FINAL
+               | ABSTRACT
+               | NATIVE
+               | SYNCHRONIZED
+               | VOLATILE
+               | EXPORT
+               | INTERFACE
+               | TRANSIENT'''
+    p[0] = ('modifier', p[1])
+
+def p_empty(p):
+    'empty :'
+    p[0] = None
 
 def p_error(p):
     if p:
-        print(f"Syntax error at '{p.value}'")
+        print(f"Error de sintaxis en línea {p.lineno}, token '{p.value}'")
     else:
-        print("Syntax error at EOF")
+        print("Error de sintaxis: final inesperado del archivo")
 
+import matplotlib.pyplot as plt
 
-def main():
-    f = open("Test/Test-1.java", "r")
-    lexer = lex.lex()
-    lexer.input(f.read())
-    parser = yacc.yacc()
-    result = parser.parse(debug=True) #True
+def draw_ast(ast):
+    fig, ax = plt.subplots(figsize=(20, 15))
+    ax.set_title("Árbol Sintáctico Abstracto (AST) - Visualización Mejorada", fontsize=14, pad=20)
+    ax.axis('off')
+    
+    # Configuración mejorada de espaciado
+    node_radius = 0.6
+    level_height = 3  # Más espacio vertical
+    sibling_gap = 4   # Más espacio horizontal
+    
+    def draw_node(x, y, text):
+        circle = plt.Circle((x, y), node_radius, color='lightblue', fill=True)
+        ax.add_patch(circle)
+        plt.text(x, y, text, ha='center', va='center', fontsize=9, wrap=True)
+        return (x, y)
+    
+    def draw_connection(parent, child):
+        ax.plot([parent[0], child[0]], [parent[1], child[1]], 'k-', lw=1, alpha=0.6)
+    
+    def calculate_width(node):
+        """Calcula el ancho necesario basado en la estructura del nodo"""
+        if not isinstance(node, (tuple, list)):
+            return 1
+        return sum(calculate_width(child) for child in node[1:]) or 1
+    
+    def plot_node(node, parent_pos, depth, x_min, x_max):
+        if not isinstance(node, (tuple, list)):
+            node = (node,)
+        
+        node_type = node[0]
+        x_center = (x_min + x_max) / 2
+        y_pos = -depth * level_height
+        pos = draw_node(x_center, y_pos, format_node_text(node))
+        
+        if parent_pos is not None:
+            draw_connection(parent_pos, pos)
+        
+        if len(node) > 1:
+            child_width = (x_max - x_min) / max(1, len(node) - 1)
+            for i, child in enumerate(node[1:]):
+                plot_node(child, pos, depth + 1, 
+                         x_min + i * child_width, 
+                         x_min + (i + 1) * child_width)
+    
+    def format_node_text(node):
+        """Mejor formato para los textos de los nodos"""
+        if node[0] == 'qualified':
+            return f"{node[1]}.{node[2]}"
+        elif node[0] == 'literal':
+            return f'"{str(node[1])}"'[:15] + ('...' if len(str(node[1])) > 15 else '')
+        elif node[0] == 'id':
+            return node[1]
+        elif node[0] == 'binary':
+            return f"Oper: {node[1]}"
+        elif node[0] == 'array_type':
+            return f"{node[1][1]}[]"
+        elif node[0] == 'method_call':
+            return f"Llamada: {node[1]}"
+        elif node[0] == 'member_access':
+            return f"Acceso: {node[2][1] if isinstance(node[2], tuple) else node[2]}"
+        else:
+            return str(node[0])
+    
+    # Extraemos el nodo principal (clase Main)
+    class_node = ast[3][0] if ast[3] else None
+    if class_node:
+        total_width = calculate_width(class_node) * sibling_gap
+        plot_node(class_node, None, 0, -total_width/2, total_width/2)
+    
+    plt.xlim(-20, 20)
+    plt.ylim(-20, 2)
+    plt.tight_layout()
+    plt.show()
 
+# Construir el parser
+parser = yacc.yacc()
 
-if __name__ == "__main__":
-    main()
+def parse_java(code):
+    lexer.input(code)
+    return parser.parse(code, lexer=lexer, debug=False)
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+    else:
+        filename = 'Testeos/Test-1.java'
+    
+    try:
+        with open(filename, 'r') as f:
+            java_code = f.read()
+        
+        ast = parse_java(java_code)
+        print("Análisis sintáctico completado con éxito.")
+        print("Árbol de sintaxis abstracta (AST):")
+        print(ast)
+        draw_ast(ast) # Visualizar el árbol
+    except FileNotFoundError:
+        print(f"Error: Archivo no encontrado - {filename}")
+    except Exception as e:
+        print(f"Error durante el análisis: {str(e)}")
