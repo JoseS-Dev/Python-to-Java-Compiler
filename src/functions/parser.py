@@ -3,7 +3,6 @@ import ply.yacc as yacc
 import io
 import sys
 import matplotlib.pyplot as plt
-from functions.arboldraw import agregar_draw_si_falta
 
 # Precedencia de operadores
 precedence = (
@@ -606,7 +605,7 @@ def proceso_parser(e):
 
         # Configura el lexer y el parser
         lexer.input(text_field_value)
-        parser = yacc.yacc(text_field_value, lexer=lexer)
+        parser = yacc.yacc()
 
         # Limpia los controles de salida
         e.control.parent.parent.controls[1].controls[2].controls[0].value = ''
@@ -619,10 +618,8 @@ def proceso_parser(e):
         sys.stdout = io.StringIO()
         sys.stderr = io.StringIO()
 
-        agregar_draw_si_falta()
-
         # Ejecuta el parser y captura la salida
-        result = parser.parse(text_field_value, debug=True)  # Aquí se genera la salida de depuración
+        result = parser.parse(text_field_value, lexer=lexer, debug=True)  # Aquí se genera la salida de depuración
 
         # Recupera la salida capturada (incluyendo la salida de depuración)
         output = sys.stdout.getvalue()
