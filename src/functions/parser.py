@@ -17,7 +17,7 @@ precedence = (
     ('left', 'DESPLAZAMIENTO_IZQUIERDO', 'DESPLAZAMIENTO_DERECHO'),
     ('left', 'SUMA', 'RESTA'),
     ('left', 'MULTIPLICACION', 'DIVISION', 'MODULO'),
-    ('right', 'UMENOS', 'UMAS' ,'NOT', 'NOT_BIT'),
+    ('right', 'NOT', 'NOT_BIT'),
     ('right', 'INCREMENTO', 'DECREMENTO'),
     ('left', 'PUNTO'),
     ('left', 'CORCHETE_ABIERTO'),
@@ -37,7 +37,7 @@ def p_program(p):
         p[0] = ('program', None, None, p[1])
 
 def p_package_decl(p):
-    'package_decl : PACKAGE qualified_id PUNTO_Y_COMA'
+    '''package_decl : PACKAGE qualified_id PUNTO_Y_COMA'''
     p[0] = ('package', p[2])
 
 def p_import_decls(p):
@@ -49,7 +49,7 @@ def p_import_decls(p):
         p[0] = [p[1]]
 
 def p_import_decl(p):
-    'import_decl : IMPORT qualified_id PUNTO_Y_COMA'
+    '''import_decl : IMPORT qualified_id PUNTO_Y_COMA'''
     p[0] = ('import', p[2])
 
 def p_class_decls(p):
@@ -61,7 +61,7 @@ def p_class_decls(p):
         p[0] = [p[1]]
 
 def p_class_decl(p):
-    'class_decl : class_header LLAVE_ABIERTA class_body LLAVE_CERRADA'
+    '''class_decl : class_header LLAVE_ABIERTA class_body LLAVE_CERRADA'''
     p[0] = ('class', p[1], p[3])
 
 def p_class_header(p):
@@ -106,6 +106,7 @@ def p_class_member(p):
 def p_field_decl(p):
     'field_decl : modifiers type variables PUNTO_Y_COMA'
     p[0] = ('field', p[1], p[2], p[3])
+    
 
 def p_variables(p):
     '''variables : variable COMA variables
@@ -165,8 +166,10 @@ def p_array_type(p):
                  | reference_type CORCHETE_ABIERTO CORCHETE_CERRADO'''
     p[0] = ('array_type', p[1])
 
+
+
 def p_constructor_decl(p):
-    'constructor_decl : modifiers ID PARENTESIS_ABIERTO formal_params PARENTESIS_CERRADO block'
+    '''constructor_decl : modifiers ID PARENTESIS_ABIERTO formal_params PARENTESIS_CERRADO block'''
     p[0] = ('constructor', p[1], p[2], p[4], p[6])
 
 def p_block(p):
@@ -234,7 +237,7 @@ def p_for_init(p):
     p[0] = ('for_init', p[1])
 
 def p_for_update(p):
-    'for_update : expression_list'
+    '''for_update : expression_list'''
     p[0] = ('for_update', p[1])
 
 def p_expression_list(p):
@@ -270,11 +273,11 @@ def p_catches(p):
         p[0] = [p[1]]
 
 def p_catch(p):
-    'catch : CATCH PARENTESIS_ABIERTO formal_param PARENTESIS_CERRADO block'
+    '''catch : CATCH PARENTESIS_ABIERTO formal_param PARENTESIS_CERRADO block'''
     p[0] = ('catch', p[3], p[5])
 
 def p_local_var_decl(p):
-    'local_var_decl : type variables'
+    '''local_var_decl : type variables'''
     p[0] = ('local_var', p[1], p[2])
 
 def p_type(p):
@@ -295,7 +298,7 @@ def p_primitive_type(p):
     p[0] = ('primitive', p[1])
 
 def p_reference_type(p):
-    'reference_type : qualified_id'
+    '''reference_type : qualified_id'''
     p[0] = ('reference', p[1])
 
 def p_qualified_id(p):
@@ -315,7 +318,8 @@ def p_qualified_id_list(p):
         p[0] = [p[1]]
 
 def p_expression(p):
-    '''expression : assignment_expression'''
+    '''expression : assignment_expression
+                 | assignment_operator expression'''
     p[0] = p[1]
 
 def p_assignment_expression(p):
@@ -440,8 +444,6 @@ def p_unary_expression(p):
                        | DECREMENTO unary_expression
                        | SUMA unary_expression
                        | RESTA unary_expression
-                       | UMAS unary_expression
-                       | UMENOS unary_expression
                        | NOT unary_expression
                        | NOT_BIT unary_expression
                        '''
@@ -500,7 +502,6 @@ def p_primary(p):
 
 def p_literal(p):
     '''literal : NUMERO
-              | CADENA
               | TRUE
               | FALSE
               | NULL
@@ -549,7 +550,7 @@ def p_modifier(p):
     p[0] = ('modifier', p[1])
 
 def p_empty(p):
-    'empty :'
+    '''empty :'''
     p[0] = None
 
 def p_error(p):
