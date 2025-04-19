@@ -557,41 +557,39 @@ def p_error(p):
         print(f"Error de sintaxis en línea {p.lineno}, token '{p.value}'")
     else:
         print("Error de sintaxis: final inesperado del archivo")
+
 def draw_ast_node(ax, node, x, y, dx, dy):
     """Dibuja el nodo y sus hijos recursivamente con separación visual"""
-    label = node.__class__.__name__
-    if hasattr(node, '__dict__'):
-        text = label
+    # Determina la etiqueta del nodo
+    if isinstance(node, tuple):
+        label = str(node[0])
+        children = [child for child in node[1:] if isinstance(child, (tuple, list))]
+    elif isinstance(node, list):
+        label = 'list'
+        children = [child for child in node if isinstance(child, (tuple, list))]
     else:
-        text = str(node)
+        label = str(node)
+        children = []
 
     # Dibuja el nodo actual
-    ax.text(x, y, text, bbox=dict(facecolor='white', edgecolor='black'), ha='center', fontsize=10)
-
-    # Obtener hijos del nodo
-    children = []
-    for attr in vars(node).values():
-        if isinstance(attr, list):
-            children.extend([c for c in attr if hasattr(c, '__dict__')])
-        elif hasattr(attr, '__dict__'):
-            children.append(attr)
+    ax.text(x, y, label, bbox=dict(facecolor='white', edgecolor='black'), ha='center', fontsize=10)
 
     num = len(children)
     if num == 0:
         return
 
-    spacing = dx / max(num - 1, 1) if num > 1 else 0  # separación entre hijos
-    start_x = x - (spacing * (num - 1) / 2)  # posición inicial centrada
+    spacing = dx / max(num - 1, 1) if num > 1 else 0
+    start_x = x - (spacing * (num - 1) / 2)
 
     for i, child in enumerate(children):
         child_x = start_x + i * spacing
         child_y = y - dy
-        ax.plot([x, child_x], [y, child_y], color='black')  # Línea entre padre e hijo
+        ax.plot([x, child_x], [y, child_y], color='black')
         draw_ast_node(ax, child, child_x, child_y, dx / 1.5, dy)
 
 def visualize_tree(root):
-    fig, ax = plt.subplots(figsize=(20, 12))  # Tamaño de la figura
-    draw_ast_node(ax, root, x=0, y=0, dx=40, dy=5)  # Ajusta dx y dy para espaciamiento
+    fig, ax = plt.subplots(figsize=(20, 12))
+    draw_ast_node(ax, root, x=0, y=0, dx=40, dy=5)
     ax.axis('off')
     plt.tight_layout()
     plt.show()
@@ -624,20 +622,22 @@ def proceso_parser(e):
         # Recupera la salida capturada (incluyendo la salida de depuración)
         output = sys.stdout.getvalue()
         outputdebug = sys.stderr.getvalue()
-        if not output.strip():
-            output = "Análisis sintáctico completado sin errores."
 
         # Restaura la salida estándar y de error
         sys.stdout = old_stdout
         sys.stderr = old_stderr
 
-        # Asigna la salida capturada al control correspondiente
-        e.control.parent.parent.controls[1].controls[2].controls[0].value = output
-        e.control.parent.parent.controls[1].controls[2].controls[1].value = outputdebug
-
-        # Visualiza el árbol sintáctico
-        visualize_tree(result)
+        if output == '':
+            output = "Análisis sintáctico completado sin errores."
+            e.control.parent.parent.controls[1].controls[2].controls[0].value = output
+            e.control.parent.parent.controls[1].controls[2].controls[1].value = outputdebug
+            visualize_tree(result)
+        else:
+            # Si hay errores en el análisis sintáctico, muestra el mensaje de error
+            e.control.parent.parent.controls[1].controls[2].controls[0].value = output
+            e.control.parent.parent.controls[1].controls[2].controls[1].value = outputdebug
 
     except Exception as ex:
         print(f"Ocurrió un error al procesar el texto: {ex}")
+
     e.control.parent.parent.controls[1].controls[2].update()
