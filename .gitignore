@@ -166,4 +166,8 @@ storage/
 parsetab.py
 parser.out
 
+<<<<<<< HEAD
 Test/
+=======
+Test/
+>>>>>>> 64258fce66eddf44569dc5f1bbb524ffd4a0d546
