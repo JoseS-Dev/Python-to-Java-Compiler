@@ -165,3 +165,5 @@ storage/
 #Parser cache
 parsetab.py
 parser.out
+
+Test/
