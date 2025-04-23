@@ -11,7 +11,9 @@ def sideMenu(page: ft.Page):
             controls=[
                 button(page,changeSection,"Léxico"),
                 button(page,changeSection,"Sintáctico"),
-                button(page,changeSection,"Semántico")
+                button(page,changeSection,"Semántico"),
+                ft.Text("-",size=20, font_family="Poppins-Bold"),
+                button(page,changeSection,"Ejecución"),
             ],
             alignment= ft.MainAxisAlignment.CENTER
         )

@@ -2,6 +2,7 @@ import flet as ft
 from components.lexer import listview
 from components.parser import parserLayout
 from components.interpreter import interpreterOutput
+from components.execution import executionLayout
 from components.globals import textpad, button, TITLE
 from functions.general import clear, textPadClear, abrir_archivo, ejecucion
 
@@ -23,6 +24,7 @@ def mainLayout(page: ft.Page):
                     listview(True),
                     parserLayout(False),
                     interpreterOutput(False),
+                    executionLayout(False),
                 ],
                 scroll= ft.ScrollMode.AUTO,
                 height=600
@@ -32,7 +34,7 @@ def mainLayout(page: ft.Page):
                 controls=[
                     button(page,lambda _: file_picker.pick_files(allowed_extensions=["java"],allow_multiple=False),"Subir",ft.icons.UPLOAD),
                     button(page, lambda _: (textPadClear(page),clear(page)),"Borrar", ft.icons.DELETE),
-                    button(page, ejecucion,"Ejecutar"),
+                    button(page, lambda _: (ejecucion(_,page)),"Ejecutar"),
                     ]
             )
         ],

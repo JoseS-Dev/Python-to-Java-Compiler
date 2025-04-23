@@ -5,8 +5,9 @@ def table():
         columns = [
             ft.DataColumn(ft.Text("Tipo")),
             ft.DataColumn(ft.Text("Valor")),
+            ft.DataColumn(ft.Text("Posición")),
         ],
-        rows=[ft.DataRow(cells=[ft.DataCell(ft.Text("")), ft.DataCell(ft.Text(""))]),],
+        rows=[ft.DataRow(cells=[ft.DataCell(ft.Text("")), ft.DataCell(ft.Text("")), ft.DataCell(ft.Text(""))]),],
         border=ft.border.all(2, '#292E41'),
         width=550,
         height=100000,

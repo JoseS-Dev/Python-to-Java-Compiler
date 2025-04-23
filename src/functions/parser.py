@@ -1,644 +1,974 @@
-from functions.lexer import *
-import ply.yacc as yacc
-import io
-import sys
 import matplotlib.pyplot as plt
+import time
+import flet as ft
+import networkx as nx
 
-# Precedencia de operadores
-precedence = (
-    ('nonassoc', 'IF', 'ELSE'),
-    ('left', 'OR_LOGICO'),
-    ('left', 'AND_LOGICO'),
-    ('left', 'OR_BIT'),
-    ('left', 'XOR_BIT'),
-    ('left', 'AND_BIT'),
-    ('left', 'IGUAL', 'DISTINTO'),
-    ('nonassoc', 'MENOR', 'MAYOR', 'MENOR_IGUAL', 'MAYOR_IGUAL', 'INSTANCEOF'),
-    ('left', 'DESPLAZAMIENTO_IZQUIERDO', 'DESPLAZAMIENTO_DERECHO'),
-    ('left', 'SUMA', 'RESTA'),
-    ('left', 'MULTIPLICACION', 'DIVISION', 'MODULO'),
-    ('right', 'NOT', 'NOT_BIT'),
-    ('right', 'INCREMENTO', 'DECREMENTO'),
-    ('left', 'PUNTO'),
-    ('left', 'CORCHETE_ABIERTO'),
-    ('right', 'CORCHETE_CERRADO'),
-    ('right', 'TERNARIO', 'DOSPUNTOS'),
-)
+class ASTNode:
+    def __init__(self, tipo, valor=None, hijos=None):
+        self.tipo = tipo
+        self.valor = valor
+        self.hijos = hijos or []
 
-def p_program(p):
-    '''program : package_decl import_decls class_decls
-              | import_decls class_decls
-              | class_decls'''
-    if len(p) == 4:
-        p[0] = ('program', p[1], p[2], p[3])
-    elif len(p) == 3:
-        p[0] = ('program', None, p[1], p[2])
-    else:
-        p[0] = ('program', None, None, p[1])
+    def __str__(self):
+        valor_str = str(self.valor) if self.valor is not None else "None"
+        if isinstance(self.hijos, list):
+            hijos_str = ", ".join(self._convertir_hijo_a_str(hijo) for hijo in self.hijos)
+        else:
+            hijos_str = self._convertir_hijo_a_str(self.hijos)
+        return f"{self.tipo}: {valor_str}, Hijos: [{hijos_str}]"
 
-def p_package_decl(p):
-    '''package_decl : PACKAGE qualified_id PUNTO_Y_COMA'''
-    p[0] = ('package', p[2])
+    def _convertir_hijo_a_str(self, hijo):
+        if isinstance(hijo, ASTNode):
+            return str(hijo)
+        elif isinstance(hijo, list):
+            return ", ".join(self._convertir_hijo_a_str(item) for item in hijo)
+        else:
+            return str(hijo)
 
-def p_import_decls(p):
-    '''import_decls : import_decl import_decls
-                   | import_decl'''
-    if len(p) == 3:
-        p[0] = [p[1]] + p[2]
-    else:
-        p[0] = [p[1]]
+    def graficar(self, parent_id=None, node_count=0, nodes=[], edges=[], level=0):
+        node_id = node_count
+        nodes.append((node_id, f"{self.tipo}: {str(self.valor) if self.valor is not None else 'None'}"))
 
-def p_import_decl(p):
-    '''import_decl : IMPORT qualified_id PUNTO_Y_COMA'''
-    p[0] = ('import', p[2])
+        if parent_id is not None:
+            edges.append((parent_id, node_id))
 
-def p_class_decls(p):
-    '''class_decls : class_decl class_decls
-                  | class_decl'''
-    if len(p) == 3:
-        p[0] = [p[1]] + p[2]
-    else:
-        p[0] = [p[1]]
+        node_count += 1
 
-def p_class_decl(p):
-    '''class_decl : class_header LLAVE_ABIERTA class_body LLAVE_CERRADA'''
-    p[0] = ('class', p[1], p[3])
+        if not isinstance(self.hijos, list):
+            self.hijos = [self.hijos]
 
-def p_class_header(p):
-    '''class_header : modifiers CLASS ID extends_clause implements_clause
-                   | CLASS ID extends_clause implements_clause'''
-    if len(p) == 6:
-        p[0] = ('class_header', p[1], p[3], p[4], p[5])
-    else:
-        p[0] = ('class_header', None, p[2], p[3], p[4])
+        for hijo in self.hijos:
+            if isinstance(hijo, ASTNode):
+                node_count = hijo.graficar(parent_id=node_id, node_count=node_count, nodes=nodes, edges=edges, level=level + 1)
+            elif isinstance(hijo, list):  
+                for subhijo in hijo:
+                    if isinstance(subhijo, ASTNode):
+                        node_count = subhijo.graficar(parent_id=node_id, node_count=node_count, nodes=nodes, edges=edges, level=level + 1)
+                    else:
+                        valor_str = str(subhijo) if subhijo is not None else "None"
+                        nodes.append((node_count, f"Valor: {valor_str}"))
+                        edges.append((node_id, node_count))
+                        node_count += 1
+            else:
+                valor_str = str(hijo) if hijo is not None else "None"
+                nodes.append((node_count, f"Valor: {valor_str}"))
+                edges.append((node_id, node_count))
+                node_count += 1
 
-def p_extends_clause(p):
-    '''extends_clause : EXTENDS qualified_id
-                     | empty'''
-    p[0] = ('extends', p[2]) if len(p) == 3 else None
+        return node_count
 
-def p_implements_clause(p):
-    '''implements_clause : IMPLEMENTS qualified_id_list
-                        | empty'''
-    p[0] = ('implements', p[2]) if len(p) == 3 else None
+    def graficar_mpl(self):
+        plt.close('all')  # Cierra todas las figuras abiertas para evitar superposiciones
+        nodes = []
+        edges = []
+        self.graficar(node_count=0, nodes=nodes, edges=edges)
 
-def p_class_body(p):
-    'class_body : class_members'
-    p[0] = p[1]
+        G = nx.DiGraph()
+        for node_id, label in nodes:
+            G.add_node(node_id, label=label)
+        for start, end in edges:
+            G.add_edge(start, end)
 
-def p_class_members(p):
-    '''class_members : class_member class_members
-                    | empty'''
-    if len(p) == 3 and p[2]:
-        p[0] = [p[1]] + p[2]
-    elif len(p) == 3:
-        p[0] = [p[1]]
-    else:
-        p[0] = []
+        pos = self.crear_layout_arbol(G, nodes, edges)
+        labels = nx.get_node_attributes(G, 'label')
 
-def p_class_member(p):
-    '''class_member : field_decl
-                   | method_decl
-                   | constructor_decl
-                   | class_decl'''
-    p[0] = ('member', p[1])
+        plt.figure(figsize=(20, 15))
+        nx.draw(G, pos, with_labels=True, labels=labels, node_size=2000, node_color='white', font_size=7, font_weight='bold', arrows=True)
+        plt.title("Árbol Sintáctico Abstracto")
+        plt.tight_layout()
+    
+        # Obtener el manejador de la figura y minimizar la ventana
+        fig_manager = plt.get_current_fig_manager()
+    
+        # Intentar diferentes métodos según el backend
+        try:
+            # Para backend TkAgg
+            fig_manager.window.state('iconic')
+        except AttributeError:
+            try:
+                # Para backend Qt
+                fig_manager.window.showMinimized()
+            except AttributeError:
+                # Si fallan ambos métodos, mostrar normalmente
+                pass
+    
+        plt.show()
 
-def p_field_decl(p):
-    'field_decl : modifiers type variables PUNTO_Y_COMA'
-    p[0] = ('field', p[1], p[2], p[3])
+    def crear_layout_arbol(self, G, nodes, edges):
+        pos = {}
+        levels = {}
+        for node_id, label in nodes:
+            level = self.obtener_nivel(node_id, edges)
+            if level not in levels:
+                levels[level] = []
+            levels[level].append(node_id)
+
+        max_level = max(levels.keys()) if levels else 0
+        vertical_spacing = 2
+        horizontal_spacing = 4
+
+        for level in range(max_level + 1):
+            if level not in levels:
+                continue
+            level_width = len(levels[level]) * horizontal_spacing
+            x_start = -level_width / 2
+            for i, node_id in enumerate(levels[level]):
+                x = x_start + i * horizontal_spacing
+                y = -level * vertical_spacing
+                pos[node_id] = (x, y)
+
+        return pos
+
+    def obtener_nivel(self, node_id, edges):
+        parent = self.obtener_padre(node_id, edges)
+        if parent is None:
+            return 0
+        return self.obtener_nivel(parent, edges) + 1
+
+    def obtener_padre(self, node_id, edges):
+        for start, end in edges:
+            if end == node_id:
+                return start
+        return None
+
+    # Método necesario para el patrón Visitor
+    def accept(self, visitor):
+        method_name = 'visit_' + self.tipo
+        visitor_method = getattr(visitor, method_name, None)
+        if visitor_method:
+            return visitor_method(self)
+        else:
+            raise NotImplementedError(f"No se encontró el método {method_name} en el visitor.")
+
+
+
+class Parser:
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.current_token_index = 0
+        self.ast = None
+        self.salida = ""
+        self.salida2 = ""
+    
+    def eat(self, expected_type):
+        """Verifica si el token actual es del tipo esperado y avanza al siguiente"""
+        if self.current_token_index < len(self.tokens):
+            token_type, token_value, l, c = self.tokens[self.current_token_index]
+
+
+            if token_type == expected_type:
+                self.current_token_index += 1
+                # Imprimir el token actual para ver qué está siendo procesado
+                print(f"Procesando token {self.current_token_index}: {token_type}, {token_value}")
+                self.salida2 += f"Token No. {self.current_token_index} procesado: {token_type} -> {token_value} ({l},{c})" + "\n"
+                return token_value
+            else:
+                self.salida2 += f"Error: Se esperaba '{expected_type}' pero se encontró '{token_value}'" + "\n"
+                raise SyntaxError(f"Error: Se esperaba '{expected_type}' pero se encontró '{token_value}'")
+        else:
+            self.salida2 += f"Error: Se esperaba '{expected_type}' pero no hay más tokens."
+            raise SyntaxError(f"Error: Se esperaba '{expected_type}' pero no hay más tokens.")
+        
+    def parse_expresion(self):
+        """Regla: Identificador | Número | Identificador Operador Identificador"""
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+
+        if token_type == "Identificador":
+            izquierda = self.eat("Identificador")
+
+            # --- Posfijo: i++ o i-- ---
+            if self.current_token_index < len(self.tokens):
+                next_type, next_value, _, _ = self.tokens[self.current_token_index]
+                if next_type == "Operador de Incremento/Decremento" and next_value in ["++", "--"]:
+                    operador = self.eat("Operador de Incremento/Decremento")
+                    return ASTNode("ExpresionUnaria", operador + "_post", [ASTNode("Identificador", izquierda, [])])
+            
+        elif token_type == "Número":
+            izquierda = self.eat("Número")
+        elif token_type == "String Literal":
+            izquierda = self.eat("String Literal")
+
+            if self.current_token_index < len(self.tokens):
+                next_type, next_value, _, _ = self.tokens[self.current_token_index]
+                if next_type == "Operador Aritmético" and next_value == "+":
+                    operador = self.eat("Operador Aritmético")
+                    if self.tokens[self.current_token_index][0] in ["Identificador", "Número", "String Literal"]:
+                        derecha_token_type = self.tokens[self.current_token_index][0]
+                        derecha = self.eat(derecha_token_type)
+                        return ASTNode("Expresion", operador, [
+                            ASTNode("Operando", izquierda, []),
+                            ASTNode("Operando", derecha, [])
+                        ])
+                    else:
+                        raise SyntaxError("Se esperaba un identificador, número o string literal después de '+'")
+                    
+        elif token_type == "Literal Booleano":
+            izquierda = self.eat("Literal Booleano")
+        elif token_type == "Literal Nulo":
+            izquierda = self.eat("Literal Nulo")
+        else:
+            raise SyntaxError(f"Error en expresión: token inesperado '{token_type}'")
+        
+        
+        
+        # Soporte para ++Identificador o --Identificador (forma prefija)
+        if token_type == "Operador de Incremento/Decremento" and token_value in ["++", "--"]:
+            operador = self.eat("Operador de Incremento/Decremento")  # Consumimos ++ o --
+            if self.tokens[self.current_token_index][0] != "Identificador":
+                raise SyntaxError(f"Se esperaba un identificador después de '{operador}'")
+            identificador = self.eat("Identificador")
+            return ASTNode("ExpresionUnaria", operador, [ASTNode("Identificador", identificador, [])])
+        
+        # Manejo de asignación
+        if self.current_token_index < len(self.tokens) and self.tokens[self.current_token_index][0] == "Operador de Asignación":
+            operador_asignacion = self.eat("Operador de Asignación")
+            derecha = self.parse_expresion()  # Llamamos de nuevo a parse_expresion() para procesar la parte derecha
+            return ASTNode("Asignacion", operador_asignacion, [ASTNode("Identificador", izquierda, []), derecha])
+        
+        # Manejo de Operadores aritméticos o relacionales
+        if self.tokens[self.current_token_index][0] in ["Operador Aritmético", "Operador Relacional"]:
+            operador = self.eat(self.tokens[self.current_token_index][0])
+            derecha = self.eat("Identificador") if self.tokens[self.current_token_index][0] == "Identificador" else self.eat("Número")
+            return ASTNode("Expresion", operador, [ASTNode("Operando", izquierda, []), ASTNode("Operando", derecha, [])])
+        
+        delimitador = self.eat("Delimitador")
+        return ASTNode("Expresion", izquierda, [ASTNode("Valor", delimitador, [])])
+
+
+    def parse_declaracion_variable(self, modificadores=None):
+        """Regla para una declaración de variable en Java: [modificadores] Tipo Identificador = Valor ;"""
+
+        if modificadores is None:
+            modificadores = []  # Si no se proporcionan modificadores, usar una lista vacía
+
+        if self.current_token_index < len(self.tokens):
+
+            token_type, token_value, _, _ = self.tokens[self.current_token_index]
+
+             # Si el token es un modificador, consumirlo y continuar
+            while token_type == "Token de Acceso" or token_type == "Palabra Reservada":
+                if token_value in ["public", "private", "protected", "static", "final"]:
+                    modificadores.append(token_value)
+                    self.eat(token_type)  # Consumir el modificador
+                else:
+                    break  # Salir del bucle si no es un modificador válido
+                
+                # Actualizar el token actual
+                if self.current_token_index < len(self.tokens):
+                    token_type, token_value, _, _ = self.tokens[self.current_token_index]
+                else:
+                    break
+
+            if token_type == "Tipo de dato" or token_value == "void":
+
+                if token_value != "void":
+                    tipo_dato = self.eat("Tipo de dato")  # Tipo de dato (int, float, etc.)
+                    identificador = self.eat("Identificador")  # Nombre de la variable
+                else:
+                    tipo_dato = self.eat("Palabra Reservada")  # variable de retorno (void.)
+                    identificador = self.eat("Identificador")  # Nombre de la variable
+
+                # Verificar si hay una asignación
+                valor = None
+                operador_asignacion = None  # Inicializar la variable
+
+                if self.tokens[self.current_token_index][0] == "Operador de Asignación":
+                    operador_asignacion = self.eat("Operador de Asignación")  # Operador '='
+                    valor = self.parse_expresion()
+
+                else:
+
+                    delimitador = self.eat("Delimitador")  # Punto y coma ';'
+                
+                # Crear el nodo de la declaración de la variable con el operador de asignación y los modificadores
+                if operador_asignacion:
+                    return ASTNode("Declaracion", tipo_dato, [modificadores, ASTNode("Identificador", identificador, []), operador_asignacion, valor])
+                else:
+                    return ASTNode("Declaracion", tipo_dato, [modificadores, ASTNode("Identificador", identificador, []), delimitador])  # Sin valor si no hay asignación
+            else:
+                raise SyntaxError("Error: Se esperaba un tipo de dato al inicio de la declaración.")
+        else:
+            raise SyntaxError("Error: No se encontraron más tokens para procesar.")
+
+
+    def parse_sentencia_if(self):
+        """Analiza una sentencia 'if' con su bloque de instrucciones y opcionales 'else' o 'else if'."""
+        
+        print("Hola 0")
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'if', pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Condicional" or token_value != "if":
+            raise SyntaxError(f"Se esperaba 'if', pero se encontró '{token_value}'.")
+        
+        print("Hola")
+        self.eat("Condicional")  # Consumimos el 'if'
+
+        # 1. Verificamos el paréntesis de apertura '('
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "(":
+            raise SyntaxError("Se esperaba '(' después de 'if'.")
+        self.eat("Delimitador")  # Consumimos '('
+
+        # 2. Expresión condicional dentro del 'if'
+        expresion = self.parse_expresion()
+
+        # 3. Verificamos el paréntesis de cierre ')'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ")":
+            raise SyntaxError("Se esperaba ')' después de la expresión condicional.")
+        self.eat("Delimitador")  # Consumimos ')'
+
+        # 4. Verificamos el delimitador de apertura de bloque '{'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después de ')'.")
+        self.eat("Delimitador")  # Consumimos '{'
+
+        # 5. Instrucciones dentro del bloque 'if'
+        instrucciones = self.parse_instrucciones()  # Parseamos las instrucciones dentro del bloque
+
+        # 6. Verificamos el delimitador de cierre de bloque '}'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final del bloque 'if'.")
+        self.eat("Delimitador")  # Consumimos '}'
+
+        # 7. Opcional: Verificamos la existencia de un 'else'
+        if self.current_token_index < len(self.tokens):
+            token_type, token_value, _, _ = self.tokens[self.current_token_index]
+            
+            if token_type == "Condicional" and token_value == "else":
+                self.eat("Condicional")  # Consumimos 'else'
+
+                # Chequeamos si lo que sigue es un 'if'
+                if self.current_token_index < len(self.tokens):
+                    next_token_type, next_token_value, _, _ = self.tokens[self.current_token_index]
+                    if next_token_type == "Condicional" and next_token_value == "if":
+                        else_if_node = self.parse_sentencia_if()
+                        return ASTNode("IfElse", expresion, [instrucciones, else_if_node])
+                
+                # Verificamos el delimitador de apertura de bloque '{'
+                if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+                    raise SyntaxError("Se esperaba '{' después de 'else'.")
+                self.eat("Delimitador")  # Consumimos '{'
+                
+                instrucciones_else = self.parse_instrucciones()  # Parseamos las instrucciones del 'else'
+                
+                # Verificamos el delimitador de cierre de bloque '}'
+                if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+                    raise SyntaxError("Se esperaba '}' al final del bloque 'else'.")
+                self.eat("Delimitador")  # Consumimos '}'
+                
+                return ASTNode("IfElse", expresion, [instrucciones, instrucciones_else])
+        
+        return ASTNode("If", None, [expresion, instrucciones])
+
+
+    def parse_sentencia_while(self):
+        """Regla para una sentencia while: while (condición) { instrucciones }"""
+        
+        # Verificar si hay más tokens antes de acceder al siguiente
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'while', pero no hay más tokens.")
+        
+        # Verificar la palabra clave 'while'
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Bucle" or token_value != "while":
+            raise SyntaxError(f"Se esperaba 'while', pero se encontró '{token_value}'.")
+        self.eat("Bucle")  # Consumir 'while'
+
+        # Verificar el delimitador '('
+        if self.current_token_index >= len(self.tokens) or self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "(":
+            raise SyntaxError("Se esperaba '(' después de 'while'.")
+        self.eat("Delimitador")  # Consumir '('
+
+        # Condición del while
+        condicion = self.parse_expresion()
+
+        # Verificar el delimitador ')'
+        if self.current_token_index >= len(self.tokens) or self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ")":
+            raise SyntaxError("Se esperaba ')' después de la condición.")
+        self.eat("Delimitador")  # Consumir ')'
+
+        # Verificar el delimitador de apertura del bloque '{'
+        if self.current_token_index >= len(self.tokens) or self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después de ')'.")
+        self.eat("Delimitador")  # Consumir '{'
+
+        # Instrucciones dentro del bloque while
+        instrucciones = self.parse_instrucciones()
+
+        # Verificar el delimitador de cierre del bloque '}'
+        if self.current_token_index >= len(self.tokens) or self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final del bloque 'while'.")
+        self.eat("Delimitador")  # Consumir '}'
+
+        # Crear el nodo para el bucle while
+        return ASTNode("While", None, [condicion, instrucciones])
     
 
-def p_variables(p):
-    '''variables : variable COMA variables
-                | variable'''
-    if len(p) == 4:
-        p[0] = [p[1]] + p[3]
-    else:
-        p[0] = [p[1]]
-
-def p_variable(p):
-    '''variable : ID
-               | ID ASIGNACION expression'''
-    if len(p) == 2:
-        p[0] = ('variable', p[1], None)
-    else:
-        p[0] = ('variable', p[1], p[3])
-
-def p_method_decl(p):
-    'method_decl : method_header block'
-    p[0] = ('method', p[1], p[2])
-
-def p_method_header(p):
-    '''method_header : modifiers type ID PARENTESIS_ABIERTO formal_params PARENTESIS_CERRADO
-                    | modifiers VOID ID PARENTESIS_ABIERTO formal_params PARENTESIS_CERRADO
-                    | modifiers type ID PARENTESIS_ABIERTO PARENTESIS_CERRADO
-                    | modifiers VOID ID PARENTESIS_ABIERTO PARENTESIS_CERRADO'''
-    if len(p) == 7:
-        p[0] = ('method_header', p[1], p[2], p[3], p[5])
-    else:
-        p[0] = ('method_header', p[1], p[2], p[3], [])
-
-def p_method_call(p):
-    '''method_call : ID PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO
-                  | THIS PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO
-                  | SUPER PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO
-                  | NEW creator PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO'''
-    p[0] = ('method_call', p[1], p[3])
-
-def p_formal_params(p):
-    '''formal_params : formal_param COMA formal_params
-                    | formal_param
-                    | empty'''
-    if len(p) == 4:
-        p[0] = [p[1]] + p[3]
-    elif len(p) == 2:
-        p[0] = [p[1]] if p[1] is not None else []
-    else:
-        p[0] = []
-
-def p_formal_param(p):
-    '''formal_param : type ID
-                   | array_type ID'''
-    p[0] = ('param', p[1], p[2])
-
-def p_array_type(p):
-    '''array_type : primitive_type CORCHETE_ABIERTO CORCHETE_CERRADO
-                 | reference_type CORCHETE_ABIERTO CORCHETE_CERRADO'''
-    p[0] = ('array_type', p[1])
-
-
-
-def p_constructor_decl(p):
-    '''constructor_decl : modifiers ID PARENTESIS_ABIERTO formal_params PARENTESIS_CERRADO block'''
-    p[0] = ('constructor', p[1], p[2], p[4], p[6])
-
-def p_block(p):
-    '''block : LLAVE_ABIERTA statements LLAVE_CERRADA
-             | LLAVE_ABIERTA LLAVE_CERRADA'''
-    if len(p) == 4:
-        p[0] = ('block', p[2])
-    else:
-        p[0] = ('block', [])
-
-def p_statements(p):
-    '''statements : statement statements
-                 | empty'''
-    if len(p) == 3 and p[2]:
-        p[0] = [p[1]] + p[2]
-    elif len(p) == 3:
-        p[0] = [p[1]]
-    else:
-        p[0] = []
-
-def p_statement(p):
-    '''statement : block
-                | WHILE PARENTESIS_ABIERTO expression PARENTESIS_CERRADO statement
-                | DO statement WHILE PARENTESIS_ABIERTO expression PARENTESIS_CERRADO PUNTO_Y_COMA
-                | FOR PARENTESIS_ABIERTO for_init PUNTO_Y_COMA expression PUNTO_Y_COMA for_update PARENTESIS_CERRADO statement
-                | SWITCH PARENTESIS_ABIERTO expression PARENTESIS_CERRADO LLAVE_ABIERTA switch_cases LLAVE_CERRADA
-                | RETURN expression PUNTO_Y_COMA
-                | RETURN PUNTO_Y_COMA
-                | BREAK PUNTO_Y_COMA
-                | CONTINUE PUNTO_Y_COMA
-                | THROW expression PUNTO_Y_COMA
-                | TRY block catches
-                | ASSERT expression PUNTO_Y_COMA
-                | TRY block catches FINALLY block
-                | expression PUNTO_Y_COMA
-                | local_var_decl PUNTO_Y_COMA
-                | PUNTO_Y_COMA'''
-    # Manejo simplificado para el ejemplo
-    if len(p) == 2:
-        p[0] = ('statement', p[1])
-    elif p[1] == 'if' and len(p) == 6:
-        p[0] = ('if', p[3], p[5])
-    elif p[1] == 'if' and len(p) == 8:
-        p[0] = ('if-else', p[3], p[5], p[7])
-    elif p[1] == 'while':
-        p[0] = ('while', p[3], p[5])
-    elif p[1] == 'do':
-        p[0] = ('do-while', p[2], p[5])
-    elif p[1] == 'for':
-        p[0] = ('for', p[3], p[5], p[7], p[9])
-    elif p[1] == 'switch':
-        p[0] = ('switch', p[3], p[6])
-    elif p[1] in ('return', 'break', 'continue', 'throw'):
-        p[0] = (p[1], p[2] if len(p) == 4 else None)
-    elif p[1] == 'try' and len(p) == 4:
-        p[0] = ('try-catch', p[2], p[3])
-    elif p[1] == 'try' and len(p) == 6:
-        p[0] = ('try-catch-finally', p[2], p[3], p[5])
-    else:
-        p[0] = ('expr-statement', p[1])
-
-def p_for_init(p):
-    '''for_init : local_var_decl
-               | expression_list'''
-    p[0] = ('for_init', p[1])
-
-def p_for_update(p):
-    '''for_update : expression_list'''
-    p[0] = ('for_update', p[1])
-
-def p_expression_list(p):
-    '''expression_list : expression
-                      | expression COMA expression_list'''
-    if len(p) == 2:
-        p[0] = [p[1]]
-    else:
-        p[0] = [p[1]] + p[3]
-
-def p_switch_cases(p):
-    '''switch_cases : switch_case switch_cases
-                   | switch_case'''
-    if len(p) == 3:
-        p[0] = [p[1]] + p[2]
-    else:
-        p[0] = [p[1]]
-
-def p_switch_case(p):
-    '''switch_case : CASE expression DOSPUNTOS statements
-                  | DEFAULT DOSPUNTOS statements'''
-    if p[1] == 'case':
-        p[0] = ('case', p[2], p[4])
-    else:
-        p[0] = ('default', p[3])
-
-def p_catches(p):
-    '''catches : catch catches
-              | catch'''
-    if len(p) == 3:
-        p[0] = [p[1]] + p[2]
-    else:
-        p[0] = [p[1]]
-
-def p_catch(p):
-    '''catch : CATCH PARENTESIS_ABIERTO formal_param PARENTESIS_CERRADO block'''
-    p[0] = ('catch', p[3], p[5])
-
-def p_local_var_decl(p):
-    '''local_var_decl : type variables'''
-    p[0] = ('local_var', p[1], p[2])
-
-def p_type(p):
-    '''type : primitive_type
-           | reference_type'''
-    p[0] = ('type', p[1])
-
-def p_primitive_type(p):
-    '''primitive_type : INT
-                     | FLOAT
-                     | DOUBLE
-                     | CHAR
-                     | BOOLEAN
-                     | SHORT
-                     | LONG
-                     | STRING
-                     | BYTE'''
-    p[0] = ('primitive', p[1])
-
-def p_reference_type(p):
-    '''reference_type : qualified_id'''
-    p[0] = ('reference', p[1])
-
-def p_qualified_id(p):
-    '''qualified_id : ID PUNTO ID
-                   | ID'''
-    if len(p) == 4:
-        p[0] = ('qualified', p[1], p[3])
-    else:
-        p[0] = ('id', p[1])
-
-def p_qualified_id_list(p):
-    '''qualified_id_list : qualified_id COMA qualified_id_list
-                        | qualified_id'''
-    if len(p) == 4:
-        p[0] = [p[1]] + p[3]
-    else:
-        p[0] = [p[1]]
-
-def p_expression(p):
-    '''expression : assignment_expression
-                 | assignment_operator expression'''
-    p[0] = p[1]
-
-def p_assignment_expression(p):
-    '''assignment_expression : conditional_expression
-                           | ID assignment_operator expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('assign', p[1], p[2], p[3])
-
-def p_assignment_operator(p):
-    '''assignment_operator : ASIGNACION
-                          | ASIGNACION_SUMA
-                          | ASIGNACION_RESTA
-                          | ASIGNACION_MULTIPLICACION
-                          | ASIGNACION_DIVISION
-                          | ASIGNACION_MODULO
-                          | DESPLAZAMIENTO_IZQUIERDO_ASIGNACION
-                          | DESPLAZAMIENTO_DERECHO_ASIGNACION'''
-    p[0] = ('assign_op', p[1])
-
-def p_conditional_expression(p):
-    '''conditional_expression : logical_or_expression
-                             | logical_or_expression TERNARIO expression DOSPUNTOS conditional_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('ternary', p[1], p[3], p[5])
-
-def p_logical_or_expression(p):
-    '''logical_or_expression : logical_and_expression
-                            | logical_or_expression OR_LOGICO logical_and_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_logical_and_expression(p):
-    '''logical_and_expression : inclusive_or_expression
-                             | logical_and_expression AND_LOGICO inclusive_or_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_inclusive_or_expression(p):
-    '''inclusive_or_expression : exclusive_or_expression
-                              | inclusive_or_expression OR_BIT exclusive_or_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_exclusive_or_expression(p):
-    '''exclusive_or_expression : and_expression
-                              | exclusive_or_expression XOR_BIT and_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_and_expression(p):
-    '''and_expression : equality_expression
-                      | and_expression AND_BIT equality_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_equality_expression(p):
-    '''equality_expression : relational_expression
-                          | equality_expression IGUAL relational_expression
-                          | equality_expression DISTINTO relational_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_relational_expression(p):
-    '''relational_expression : shift_expression
-                            | relational_expression MENOR shift_expression
-                            | relational_expression MAYOR shift_expression
-                            | relational_expression MENOR_IGUAL shift_expression
-                            | relational_expression MAYOR_IGUAL shift_expression
-                            | relational_expression INSTANCEOF reference_type'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_shift_expression(p):
-    '''shift_expression : additive_expression
-                       | shift_expression DESPLAZAMIENTO_IZQUIERDO additive_expression
-                       | shift_expression DESPLAZAMIENTO_DERECHO additive_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_additive_expression(p):
-    '''additive_expression : multiplicative_expression
-                          | additive_expression SUMA multiplicative_expression
-                          | additive_expression RESTA multiplicative_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_multiplicative_expression(p):
-    '''multiplicative_expression : unary_expression
-                                | multiplicative_expression MULTIPLICACION unary_expression
-                                | multiplicative_expression DIVISION unary_expression
-                                | multiplicative_expression MODULO unary_expression'''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('binary', p[2], p[1], p[3])
-
-def p_unary_expression(p):
-    '''unary_expression : postfix_expression
-                       | INCREMENTO unary_expression
-                       | DECREMENTO unary_expression
-                       | SUMA unary_expression
-                       | RESTA unary_expression
-                       | NOT unary_expression
-                       | NOT_BIT unary_expression
-                       '''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        p[0] = ('unary', p[1], p[2])
-
-def p_if_statement(p):
-    '''statement : IF PARENTESIS_ABIERTO expression PARENTESIS_CERRADO statement %prec IF
-                 | IF PARENTESIS_ABIERTO expression PARENTESIS_CERRADO statement ELSE statement'''
-    if len(p) == 6:
-        p[0] = ('if', p[3], p[5])
-    else:
-        p[0] = ('if-else', p[3], p[5], p[7])
-
-def p_postfix_expression(p):
-    '''postfix_expression : primary
-                         | postfix_expression INCREMENTO
-                         | postfix_expression DECREMENTO
-                         | postfix_expression PUNTO member_access %prec PUNTO
-                         | postfix_expression CORCHETE_ABIERTO expression CORCHETE_CERRADO'''
-    if len(p) == 2:
-        p[0] = p[1]
-    elif len(p) == 3:
-        p[0] = ('postfix', p[1], p[2])
-    elif p[2] == '[':
-        p[0] = ('array_access', p[1], p[3])
-    else:
-        p[0] = ('member_access', p[1], p[3])
-
-def p_member_access(p):
-    '''member_access : ID
-                    | THIS
-                    | SUPER
-                    | NEW creator
-                    | method_call'''
-    if len(p) == 2:
-        p[0] = ('member', p[1])
-    else:
-        p[0] = ('new_member', p[2])
-
-def p_primary(p):
-    '''primary : literal
-              | THIS
-              | SUPER
-              | PARENTESIS_ABIERTO expression PARENTESIS_CERRADO
-              | NEW creator
-              | qualified_id'''
-    if len(p) == 2:
-        p[0] = ('primary', p[1])
-    elif p[1] == '(':
-        p[0] = p[2]
-    elif p[1] == 'new':
-        p[0] = ('new', p[2])
-
-def p_literal(p):
-    '''literal : NUMERO
-              | TRUE
-              | FALSE
-              | NULL
-              | OCTAL_NUMERO
-              | HEX_NUMERO
-              | BINARIO_NUMERO'''
-    p[0] = ('literal', p[1])
-
-def p_creator(p):
-    '''creator : qualified_id PARENTESIS_ABIERTO arguments PARENTESIS_CERRADO
-              | qualified_id CORCHETE_ABIERTO expression CORCHETE_CERRADO
-              | qualified_id CORCHETE_ABIERTO CORCHETE_CERRADO
-              | primitive_type CORCHETE_ABIERTO expression CORCHETE_CERRADO
-              | primitive_type CORCHETE_ABIERTO CORCHETE_CERRADO'''
-    if len(p) == 5:
-        p[0] = ('creator', p[1], p[3])
-    else:
-        p[0] = ('creator', p[1], None)
-
-def p_arguments(p):
-    '''arguments : expression_list
-                | empty'''
-    p[0] = ('args', p[1] if p[1] else [])
-
-def p_modifiers(p):
-    '''modifiers : modifier modifiers
-                | modifier'''
-    if len(p) == 3:
-        p[0] = [p[1]] + p[2]
-    else:
-        p[0] = [p[1]]
-
-def p_modifier(p):
-    '''modifier : PUBLIC
-               | PRIVATE
-               | PROTECTED
-               | STATIC
-               | FINAL
-               | ABSTRACT
-               | NATIVE
-               | SYNCHRONIZED
-               | VOLATILE
-               | EXPORT
-               | INTERFACE
-               | TRANSIENT'''
-    p[0] = ('modifier', p[1])
-
-def p_empty(p):
-    '''empty :'''
-    p[0] = None
-
-def p_error(p):
-    if p:
-        print(f"Error de sintaxis en línea {p.lineno}, token '{p.value}'")
-    else:
-        print("Error de sintaxis: final inesperado del archivo")
-
-def draw_ast_node(ax, node, x, y, dx, dy):
-    """Dibuja el nodo y sus hijos recursivamente con separación visual"""
-    # Determina la etiqueta del nodo
-    if isinstance(node, tuple):
-        label = str(node[0])
-        children = [child for child in node[1:] if isinstance(child, (tuple, list))]
-    elif isinstance(node, list):
-        label = 'list'
-        children = [child for child in node if isinstance(child, (tuple, list))]
-    else:
-        label = str(node)
-        children = []
-
-    # Dibuja el nodo actual
-    ax.text(x, y, label, bbox=dict(facecolor='white', edgecolor='black'), ha='center', fontsize=10)
-
-    num = len(children)
-    if num == 0:
-        return
-
-    spacing = dx / max(num - 1, 1) if num > 1 else 0
-    start_x = x - (spacing * (num - 1) / 2)
-
-    for i, child in enumerate(children):
-        child_x = start_x + i * spacing
-        child_y = y - dy
-        ax.plot([x, child_x], [y, child_y], color='black')
-        draw_ast_node(ax, child, child_x, child_y, dx / 1.5, dy)
-
-def visualize_tree(root):
-    fig, ax = plt.subplots(figsize=(20, 12))
-    draw_ast_node(ax, root, x=0, y=0, dx=40, dy=5)
-    ax.axis('off')
-    plt.tight_layout()
-    plt.show()
-
-def proceso_parser(e):
-    text_field_value = e.control.parent.parent.controls[1].controls[0].value
-    try:
-        if not text_field_value.strip():
-            print("La entrada está vacía.")
-            return
-
-        # Configura el lexer y el parser
-        lexer.input(text_field_value)
-        parser = yacc.yacc()
-
-        # Limpia los controles de salida
-        e.control.parent.parent.controls[1].controls[2].controls[0].value = ''
-        e.control.parent.parent.controls[1].controls[2].controls[1].value = ''
-        e.control.parent.parent.controls[1].controls[2].update()
-
-        # Redirige la salida estándar y la salida de error a objetos StringIO
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-        sys.stdout = io.StringIO()
-        sys.stderr = io.StringIO()
-
-        # Ejecuta el parser y captura la salida
-        result = parser.parse(text_field_value, lexer=lexer, debug=True)  # Aquí se genera la salida de depuración
-
-        # Recupera la salida capturada (incluyendo la salida de depuración)
-        output = sys.stdout.getvalue()
-        outputdebug = sys.stderr.getvalue()
-
-        # Restaura la salida estándar y de error
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
-
-        if output == '':
-            output = "Análisis sintáctico completado sin errores."
-            e.control.parent.parent.controls[1].controls[2].controls[0].value = output
-            e.control.parent.parent.controls[1].controls[2].controls[1].value = outputdebug
-            visualize_tree(result)
+    def parse_sentencia_do_while(self):
+        """Regla para una sentencia do-while: do { instrucciones } while (condición);"""
+        
+        # Verificar la palabra clave 'do'
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'do', pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Bucle" or token_value != "do":
+            raise SyntaxError(f"Se esperaba 'do', pero se encontró '{token_value}'.")
+        self.eat("Bucle")  # Consumir 'do'
+
+        # Verificar el delimitador de apertura del bloque '{'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después de 'do'.")
+        self.eat("Delimitador")  # Consumir '{'
+
+        # Instrucciones dentro del bloque do
+        instrucciones = self.parse_instrucciones()
+
+        # Verificar el delimitador de cierre del bloque '}'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final del bloque 'do'.")
+        self.eat("Delimitador")  # Consumir '}'
+
+        # Verificar la palabra clave 'while'
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'while', pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Bucle" or token_value != "while":
+            raise SyntaxError(f"Se esperaba 'while', pero se encontró '{token_value}'.")
+        self.eat("Bucle")  # Consumir 'while'
+
+        # Verificar el delimitador '('
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "(":
+            raise SyntaxError("Se esperaba '(' después de 'while'.")
+        self.eat("Delimitador")  # Consumir '('
+
+        # Condición del while
+        condicion = self.parse_expresion()
+
+        # Verificar el delimitador ')'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ")":
+            raise SyntaxError("Se esperaba ')' después de la condición.")
+        self.eat("Delimitador")  # Consumir ')'
+
+        # Verificar el delimitador ';'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ";":
+            raise SyntaxError("Se esperaba ';' al final de 'do-while'.")
+        self.eat("Delimitador")  # Consumir ';'
+
+        # Crear el nodo para el bucle do-while
+        return ASTNode("DoWhile", None, [instrucciones, condicion])
+    
+    def parse_sentencia_for(self):
+        """Regla para una sentencia for: for (inicialización; condición; actualización) { ... }"""
+
+        # Verificar la palabra clave 'for'
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'for', pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Bucle" or token_value != "for":
+            raise SyntaxError(f"Se esperaba 'for', pero se encontró '{token_value}'.")
+        self.eat("Bucle")  # Consumir 'for'
+
+        # Verificar el delimitador '('
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "(":
+            raise SyntaxError("Se esperaba '(' después de 'for'.")
+        self.eat("Delimitador")  # Consumir '('
+
+        # Inicialización (declaración o expresión)
+        if self.tokens[self.current_token_index][0] == "Tipo de dato":
+            inicializacion = self.parse_declaracion_variable()
         else:
-            # Si hay errores en el análisis sintáctico, muestra el mensaje de error
-            e.control.parent.parent.controls[1].controls[2].controls[0].value = output
-            e.control.parent.parent.controls[1].controls[2].controls[1].value = outputdebug
+            inicializacion = self.parse_expresion()
 
-    except Exception as ex:
-        print(f"Ocurrió un error al procesar el texto: {ex}")
 
-    e.control.parent.parent.controls[1].controls[2].update()
+        # Condición
+        condicion = self.parse_expresion()
+
+        # Verificar el delimitador ';'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ";":
+            raise SyntaxError("Se esperaba ';' después de la condición.")
+        self.eat("Delimitador")  # Consumir ';'
+
+        # Actualización
+        actualizacion = self.parse_expresion()
+
+        # Verificar el delimitador ')'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ")":
+            raise SyntaxError("Se esperaba ')' después de la actualización.")
+        self.eat("Delimitador")  # Consumir ')'
+
+        # Verificar el delimitador de apertura del bloque '{'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después de 'for'.")
+        self.eat("Delimitador")  # Consumir '{'
+
+        # Instrucciones dentro del bloque for
+        instrucciones = self.parse_instrucciones()
+
+        # Verificar el delimitador de cierre del bloque '}'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final del bloque 'for'.")
+        self.eat("Delimitador")  # Consumir '}'
+
+        # Crear el nodo para el bucle for
+        return ASTNode("For", None, [inicializacion, condicion, actualizacion, instrucciones])
+
+    
+
+    def parse_declaracion_funcion(self, modificadores=None):
+        """Regla para una declaración de función: [modificadores] tipo_retorno nombre_funcion(parámetros) { ... }"""
+        if modificadores is None:
+            modificadores = []  # Si no se proporcionan modificadores, usar una lista vacía
+        
+        # Validar combinaciones inválidas de modificadores
+        if "abstract" in modificadores and "final" in modificadores:
+            raise SyntaxError("Error: Un método no puede ser 'abstract' y 'final' al mismo tiempo.")
+        if "abstract" in modificadores and "static" in modificadores:
+            raise SyntaxError("Error: Un método no puede ser 'abstract' y 'static' al mismo tiempo.")
+        
+        
+        # Verificar el tipo de retorno
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba un tipo de retorno, pero no hay más tokens.")
+        
+        if self.tokens[self.current_token_index][0] == "Tipo de dato":
+
+            tipo_retorno = self.eat("Tipo de dato")  # Consumir el tipo de retorno (int, float, etc)
+        else:
+            tipo_retorno = self.eat("Palabra Reservada") # Consumir el tipo de retorno (void)
+
+        # Verificar el nombre de la función
+        nombre_funcion = self.eat("Identificador")  # Consumir el nombre de la función
+
+        
+        # Verificar el delimitador '('
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "(":
+            raise SyntaxError("Se esperaba '(' después del nombre de la función.")
+        self.eat("Delimitador")  # Consumir '('
+
+       
+        # Parámetros (pueden ser múltiples, separados por comas)
+        parametros = []
+        while self.current_token_index < len(self.tokens):
+            token_type, token_value, _, _ = self.tokens[self.current_token_index]
+            
+            # Si encontramos ')', significa que no hay más parámetros
+            if token_type == "Delimitador" and token_value == ")":
+                break  # Salir del bucle si encontramos ')'
+            
+            if token_type == "Tipo de dato":
+                tipo_parametro = self.eat("Tipo de dato")
+                nombre_parametro = self.eat("Identificador")
+                parametros.append((tipo_parametro, nombre_parametro))
+            
+                # Verificar si hay más parámetros
+                if self.current_token_index < len(self.tokens) and self.tokens[self.current_token_index][0] == "Delimitador" and self.tokens[self.current_token_index][1] == ",":
+                    self.eat("Delimitador")  # Consumir ','
+            else:
+                raise SyntaxError(f"Error: Token inesperado '{token_value}' en la lista de parámetros.")
+
+       
+        # Verificar el delimitador ')'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ")":
+            raise SyntaxError("Se esperaba ')' después de los parámetros.")
+        self.eat("Delimitador")  # Consumir ')'
+
+        
+        # Verificar el delimitador de apertura del bloque '{'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después de la declaración de la función.")
+        self.eat("Delimitador")  # Consumir '{'
+
+        # Instrucciones dentro del bloque de la función
+        instrucciones = self.parse_instrucciones()
+
+        # Verificar el delimitador de cierre del bloque '}'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final del bloque de la función.")
+        self.eat("Delimitador")  # Consumir '}'
+
+        # Crear el nodo para la declaración de la función
+        return ASTNode("Funcion", tipo_retorno, [modificadores, nombre_funcion, parametros, instrucciones])
+    
+
+    def parse_sentencia_try_catch(self):
+        """Regla para una sentencia try-catch: try { ... } catch (TipoExcepcion e) { ... }"""
+        
+        # Verificar la palabra clave 'try'
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'try', pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Excepción" or token_value != "try":
+            raise SyntaxError(f"Se esperaba 'try', pero se encontró '{token_value}'.")
+        self.eat("Excepción")  # Consumir 'try'
+
+        # Verificar el delimitador de apertura del bloque '{'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después de 'try'.")
+        self.eat("Delimitador")  # Consumir '{'
+
+        # Instrucciones dentro del bloque try
+        instrucciones_try = self.parse_instrucciones()
+
+        # Verificar el delimitador de cierre del bloque '}'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final del bloque 'try'.")
+        self.eat("Delimitador")  # Consumir '}'
+
+        # Verificar la palabra clave 'catch'
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'catch', pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Excepción" or token_value != "catch":
+            raise SyntaxError(f"Se esperaba 'catch', pero se encontró '{token_value}'.")
+        self.eat("Excepción")  # Consumir 'catch'
+
+        # Verificar el delimitador '('
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "(":
+            raise SyntaxError("Se esperaba '(' después de 'catch'.")
+        self.eat("Delimitador")  # Consumir '('
+
+        # Tipo de excepción
+        tipo_excepcion = self.eat("Tipo de dato")  # Consumir el tipo de excepción
+
+        # Nombre de la variable de excepción
+        nombre_excepcion = self.eat("Identificador")  # Consumir el nombre de la excepción
+
+        # Verificar el delimitador ')'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ")":
+            raise SyntaxError("Se esperaba ')' después de la declaración de la excepción.")
+        self.eat("Delimitador")  # Consumir ')'
+
+        # Verificar el delimitador de apertura del bloque '{'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después de 'catch'.")
+        self.eat("Delimitador")  # Consumir '{'
+
+        # Instrucciones dentro del bloque catch
+        instrucciones_catch = self.parse_instrucciones()
+
+        # Verificar el delimitador de cierre del bloque '}'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final del bloque 'catch'.")
+        self.eat("Delimitador")  # Consumir '}'
+
+        # Crear el nodo para la sentencia try-catch
+        return ASTNode("TryCatch", None, [instrucciones_try, (tipo_excepcion, nombre_excepcion), instrucciones_catch])
+    
+
+    def parse_sentencia_switch(self):
+        """Regla para una sentencia switch: switch (expresión) { case valor: ... break; default: ... }"""
+        
+        # Verificar la palabra clave 'switch'
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'switch', pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Palabra Reservada" or token_value != "switch":
+            raise SyntaxError(f"Se esperaba 'switch', pero se encontró '{token_value}'.")
+        self.eat("Palabra Reservada")  # Consumir 'switch'
+
+        # Verificar el delimitador '('
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "(":
+            raise SyntaxError("Se esperaba '(' después de 'switch'.")
+        self.eat("Delimitador")  # Consumir '('
+
+        # Expresión del switch
+        expresion = self.parse_expresion()
+
+        # Verificar el delimitador de apertura del bloque '{'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después de 'switch'.")
+        self.eat("Delimitador")  # Consumir '{'
+
+        # Casos del switch
+        casos = []
+        default_case = None
+
+        while self.current_token_index < len(self.tokens):
+            token_type, token_value, _, _ = self.tokens[self.current_token_index]
+            
+            # Verificar si es un caso
+            if token_type == "Palabra Reservada" and token_value == "case":
+                self.eat("Palabra Reservada")  # Consumir 'case'
+                
+                # Valor del caso
+                valor = self.parse_expresion()
+
+                # Instrucciones del caso
+                instrucciones = self.parse_instrucciones()
+
+                # Agregar el caso a la lista
+                casos.append(ASTNode("Case", None, [valor, instrucciones]))
+            
+            # Verificar si es el caso por defecto
+            elif token_type == "Palabra Reservada" and token_value == "default":
+                self.eat("Palabra Reservada")  # Consumir 'default'
+
+                # Verificar el delimitador ':'
+                if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ":":
+                    raise SyntaxError("Se esperaba ':' después de 'default'.")
+                self.eat("Delimitador")  # Consumir ':'
+
+                # Instrucciones del caso por defecto
+                default_case = self.parse_instrucciones()
+            
+            # Verificar el delimitador de cierre del bloque '}'
+            elif token_type == "Delimitador" and token_value == "}":
+                break  # Salir del bucle
+            
+            else:
+                raise SyntaxError(f"Token inesperado '{token_value}' en el switch.")
+
+        # Verificar el delimitador de cierre del bloque '}'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final del bloque 'switch'.")
+        self.eat("Delimitador")  # Consumir '}'
+
+        if default_case:
+            default_case = ASTNode("Default", None, [default_case])
+
+
+        # Crear el nodo para la sentencia switch
+        return ASTNode("Switch", None, [expresion] + casos + ([default_case] if default_case else []))
+    
+    
+    def parse_sentencia_break(self):
+        """Regla para una sentencia break;"""
+        self.eat("Palabra Reservada")  # Consumir 'break'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != ";":
+            raise SyntaxError("Se esperaba ';' después de 'break'.")
+        self.eat("Delimitador")  # Consumir ';'
+        return ASTNode("Break", "break", [])
+
+
+    def parse_declaracion_clase(self, modificadores=None):
+        """Regla para una declaración de clase: [modificadores] class NombreClase { ... }"""
+        if modificadores is None:
+            modificadores = []  # Si no se proporcionan modificadores, usar una lista vacía
+        
+        # Verificar la palabra clave 'class'
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba 'class', pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        if token_type != "Palabra Reservada" or token_value != "class":
+            raise SyntaxError(f"Se esperaba 'class', pero se encontró '{token_value}'.")
+        self.eat("Palabra Reservada")  # Consumir 'class'
+
+        # Nombre de la clase
+        nombre_clase = self.eat("Identificador")  # Consumir el nombre de la clase
+
+        # Verificar el delimitador de apertura del bloque '{'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "{":
+            raise SyntaxError("Se esperaba '{' después del nombre de la clase.")
+        self.eat("Delimitador")  # Consumir '{'
+
+        # Atributos y métodos de la clase
+        miembros = []
+
+        while self.current_token_index < len(self.tokens):
+            token_type, token_value, _, _ = self.tokens[self.current_token_index]
+            
+            # Verificar si es el cierre de bloque '}'
+            if token_type == "Delimitador" and token_value == "}":
+                break  # Salir del bucle si encontramos '}'
+
+            # Recolectar modificadores (public, private, protected, static, etc.)
+            modificadores_miembro = self.parse_modificadores()
+
+            # Verificar el tipo de declaración basado en el siguiente token
+            if self.current_token_index < len(self.tokens):
+                token_type, token_value, _, _ = self.tokens[self.current_token_index]
+            
+                # 1. Declaración de variable (atributo)
+                if token_type == "Tipo de dato":
+                    miembros.append(self.parse_declaracion_variable(modificadores_miembro))  # Atributo
+                    print("cond 1")
+                
+                # 2. Declaración de función (método)
+                elif token_type == "Tipo de dato" or (token_type == "Palabra Reservada" and token_value == "void"):
+                    miembros.append(self.parse_declaracion_funcion(modificadores_miembro))  # Método
+                    print("cond 2")
+
+                # Verificar si es un delimitador ';' (instrucción vacía)
+                elif token_type == "Delimitador" and token_value == ";":
+                    self.eat("Delimitador")  # Consumir ';'
+                    print("cond 3")
+                
+                # 3. Token inesperado
+                else:
+                    raise SyntaxError(f"Token inesperado '{token_value}' en la clase. Se esperaba un atributo, método o '}}'.")
+
+        # Verificar el delimitador de cierre del bloque '}'
+        if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "}":
+            raise SyntaxError("Se esperaba '}' al final de la clase.")
+        self.eat("Delimitador")  # Consumir '}'
+
+        # Crear el nodo para la declaración de la clase
+        return ASTNode("Clase", None, [modificadores, nombre_clase, miembros])
+
+
+    def parse_modificadores(self):
+        """Recolecta los modificadores de acceso y otros modificadores."""
+        modificadores = []
+        while self.current_token_index < len(self.tokens):
+            token_type, token_value, _, _ = self.tokens[self.current_token_index]
+            
+            # Verificar si es un modificador válido
+            if token_type == "Token de Acceso" or token_type == "Palabra Reservada":
+                if token_value in ["public", "private", "protected", "static", "final", "abstract"]:
+                    modificadores.append(token_value)
+                    self.eat(token_type)  # Consumir el modificador
+                else:
+                    break  # Salir del bucle si no es un modificador válido
+            else:
+                break  # Salir del bucle si no es un modificador
+        
+        return modificadores
+
+    def parse_sentencia_print(self):
+        """Regla para una sentencia System.out.println o System.out.print: System.out.println(expresión);"""
+        
+        # Verificar si es una sentencia de impresión
+        if self.current_token_index >= len(self.tokens):
+            raise SyntaxError("Se esperaba una sentencia de impresión, pero no hay más tokens.")
+        
+        token_type, token_value, _, _ = self.tokens[self.current_token_index]
+        
+        # Verificar si es un token de impresión específico
+        if token_type == "Imprimir":
+            tipo_print = self.eat("Imprimir")
+            
+            # Verificar el paréntesis de apertura
+            if self.tokens[self.current_token_index][0] != "Delimitador" or self.tokens[self.current_token_index][1] != "(":
+                raise SyntaxError("Se esperaba '(' después de la sentencia de impresión.")
+            self.eat("Delimitador")  # Consumir '('
+            
+            # Procesar argumentos
+            expr = self.parse_expresion()
+            argumentos = [expr]
+
+            # Verificar el punto y coma
+            if self.tokens[self.current_token_index][0] == "Delimitador" or self.tokens[self.current_token_index][1] != ";":
+                if self.tokens[self.current_token_index][1] == ';':
+                    self.eat("Delimitador")  # Consumir ';'
+                elif self.tokens[self.current_token_index][1] == ')':
+                    self.eat("Delimitador")  # Consumir ')'
+                    self.eat("Delimitador")  # Consumir ';'
+            else:
+                raise SyntaxError("Se esperaba ';' al final de la sentencia print.")
+            
+            # Crear el nodo para la sentencia print
+            return ASTNode("Print", tipo_print, argumentos)
+        
+        else:
+            raise SyntaxError(f"Se esperaba una sentencia de impresión, pero se encontró '{token_value}'.")
+
+
+    def parse_instrucciones(self):
+        """Analiza las instrucciones dentro de un bloque."""
+        instrucciones = []
+        while self.current_token_index < len(self.tokens):
+            token_type, token_value, _, _ = self.tokens[self.current_token_index]
+            
+             # 🚨 Detener cuando aparezca el siguiente case, default o cierre de bloque
+            if (token_type == "Palabra Reservada" and token_value in ["case", "default"]) or (token_type == "Delimitador" and token_value == "}"):
+                break
+            
+            # Recolectar modificadores (public, private, protected, static, etc.)
+            modificadores = self.parse_modificadores()
+            
+            # Verificar el tipo de declaración basado en el siguiente token
+            if self.current_token_index < len(self.tokens):
+                token_type, token_value, _, _ = self.tokens[self.current_token_index]
+                
+                # 1. Declaración de variable
+                if token_type == "Tipo de dato":
+                    print("Inicio")
+                    instrucciones.append(self.parse_declaracion_variable(modificadores))  # Declaración de variable
+                
+                # 2. Declaración de función
+                elif token_type == "Tipo de dato" or (token_type == "Palabra Reservada" and token_value == "void"):
+                    instrucciones.append(self.parse_declaracion_funcion(modificadores))  # Declaración de función
+                
+                # 3. Declaración de clase
+                elif token_type == "Palabra Reservada" and token_value == "class":
+                    instrucciones.append(self.parse_declaracion_clase(modificadores))  # Declaración de clase
+                
+                # 4. Sentencia if
+                elif token_type == "Condicional" and token_value == "if":
+                    print("Entro")
+                    instrucciones.append(self.parse_sentencia_if())  # Sentencia if
+                
+                # 5. Sentencia while
+                elif token_type == "Bucle" and token_value == "while":
+                    instrucciones.append(self.parse_sentencia_while())  # Sentencia while
+                
+                # 6. Sentencia do-while
+                elif token_type == "Bucle" and token_value == "do":
+                    instrucciones.append(self.parse_sentencia_do_while())  # Sentencia do-while
+                
+                # 7. Sentencia for
+                elif token_type == "Bucle" and token_value == "for":
+                    instrucciones.append(self.parse_sentencia_for())  # Sentencia for
+                
+                # 8. Sentencia try-catch
+                elif token_type == "Excepción" and token_value == "try":
+                    instrucciones.append(self.parse_sentencia_try_catch())  # Sentencia try-catch
+                
+                # 9. Sentencia switch
+                elif token_type == "Palabra Reservada" and token_value == "switch":
+                    instrucciones.append(self.parse_sentencia_switch())  # Sentencia switch
+                
+                elif token_type == "Palabra Reservada" and token_value == "break":
+                    instrucciones.append(self.parse_sentencia_break())
+                
+                # 10. Sentencia de impresión (System.out.print/println o token Imprimir)
+                elif token_type == "Imprimir" or (token_type == "Identificador" and token_value == "System"):
+                    instrucciones.append(self.parse_sentencia_print())  # Sentencia print
+                
+                # 11. Expresión o asignación
+                elif token_type == "Identificador":
+                    if self.current_token_index + 1 < len(self.tokens) and self.tokens[self.current_token_index + 1][0] == "Operador de Asignación":
+                        instrucciones.append(self.parse_expresion())  # Asignación
+                    else:
+                        instrucciones.append(self.parse_expresion())  # Expresión
+                
+                # 12. Delimitador (punto y coma)
+                elif token_type == "Delimitador" and token_value == ";":
+                    self.eat("Delimitador")  # Consumir ';' (instrucción vacía)
+                
+                # 13. Token inesperado
+                else:
+                    raise SyntaxError(f"Token inesperado '{token_type}: {token_value}'")
+        
+        # Crear el nodo para el bloque de instrucciones
+        return ASTNode("Bloque", None, instrucciones)
+            
+    def parse(self):
+        """Inicia el análisis sintáctico"""
+        try:
+            self.ast = self.parse_instrucciones()
+
+            print("AST Generado:", self.ast)
+            print("")
+            print(self.ast.hijos)
+
+            # Comprobamos si hemos procesado todos los tokens
+            if self.current_token_index < len(self.tokens):
+                raise SyntaxError(f"Token inesperado '{self.tokens[self.current_token_index][1]}' al final del código.")
+
+            return self.ast  # Retornar el árbol de sintaxis abstracta
+
+        except SyntaxError as e:
+            self.salida += f"Error de sintaxis: {e}\n"
+            print(f"Error de sintaxis: {e}")
+        except Exception as e:
+            self.salida += f"Error inesperado: {e}\n"
+            print(f"Error inesperado: {e}")

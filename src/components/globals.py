@@ -21,13 +21,14 @@ def textpad(page: ft.Page,function):
         on_change=function
     )
 
-def button(page: ft.Page,function,Buttontext="",icono=None):
+def button(page: ft.Page,function,Buttontext="",icono=None, disabled=False):
     return ft.Button(
         text=Buttontext,
         width=100,
         height=40,
         on_click=function,
-        icon=icono
+        icon=icono,
+        disabled=disabled
     )
 
 TITLE = title("Analizador Léxico")
