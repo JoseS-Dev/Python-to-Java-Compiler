@@ -53,6 +53,7 @@ class SemanticAnalyzer:
         self.errors = []
         self.current_class = None
         self.current_function = None
+        self.log = []  # Nuevo atributo para registrar los estados
         self.java_to_python_types = {
             'int': 'int',
             'float': 'float',
@@ -64,18 +65,27 @@ class SemanticAnalyzer:
             'void': 'None'
         }
 
+    def _add_log_entry(self, message):
+        """Añade una entrada al registro de estados."""
+        self.log.append(message)
+
     def analyze(self, ast):
         """Analyze the AST for semantic errors."""
+        self._add_log_entry("Iniciando análisis semántico")
         if ast is None:
+            self._add_log_entry("AST es None, finalizando análisis")
             return False
         
         self._analyze_node(ast)
+        self._add_log_entry(f"Análisis completado. Errores encontrados: {len(self.errors)}")
         return len(self.errors) == 0
 
     def _analyze_node(self, node):
         """Recursively analyze a node in the AST."""
         if node is None:
             return
+        
+        self._add_log_entry(f"Analizando nodo de tipo: {node.tipo}")
         
         # Process node based on its type
         if node.tipo == "Bloque":
@@ -111,16 +121,19 @@ class SemanticAnalyzer:
 
     def _analyze_block(self, node):
         """Analyze a block of code."""
+        self._add_log_entry("Entrando a nuevo ámbito de bloque")
         self.symbol_table.enter_scope()
         
         for hijo in node.hijos:
             self._analyze_node(hijo)
         
+        self._add_log_entry("Saliendo del ámbito de bloque")
         self.symbol_table.exit_scope()
 
     def _analyze_declaration(self, node):
         """Analyze a variable declaration."""
-        tipo_dato = node.valor  # Type of the variable
+        tipo_dato = node.valor
+        self._add_log_entry(f"Analizando declaración de variable de tipo: {tipo_dato}")
         
         # Extract information from the declaration
         modificadores = []
@@ -172,6 +185,8 @@ class SemanticAnalyzer:
                         f"Error semántico: No se puede asignar valor de tipo '{valor_tipo}' a variable de tipo '{tipo_dato}'"
                     )
 
+        self._add_log_entry(f"Variable '{identificador}' declarada como tipo '{tipo_dato}'")
+
     def _analyze_assignment(self, node):
         """Analyze an assignment statement."""
         # The left side should be an identifier
@@ -189,6 +204,8 @@ class SemanticAnalyzer:
         # Check if the variable exists
         var_name = left_node.valor
         var_info = self.symbol_table.lookup(var_name)
+
+        self._add_log_entry(f"Analizando asignación a variable: {var_name}")
         
         if var_info is None:
             self.errors.append(f"Error semántico: Variable '{var_name}' no declarada")
@@ -198,6 +215,8 @@ class SemanticAnalyzer:
         if var_info['constant'] and var_info['initialized']:
             self.errors.append(f"Error semántico: No se puede modificar la constante '{var_name}'")
             return
+        
+        self._add_log_entry(f"Análisis de función '{var_name}' completado")
         
         # Analyze the right side
         if right_node is not None:
@@ -370,7 +389,7 @@ class SemanticAnalyzer:
         # Save current class for context
         prev_class = self.current_class
         self.current_class = nombre_clase
-        
+        self._add_log_entry(f"Analizando clase: {nombre_clase}")
         # Enter a new scope for the class
         self.symbol_table.enter_scope()
         
@@ -384,6 +403,7 @@ class SemanticAnalyzer:
         
         # Restore previous class context
         self.current_class = prev_class
+        self._add_log_entry(f"Análisis de clase '{nombre_clase}' completado")
 
     def _analyze_try_catch(self, node):
         """Analyze a try-catch statement."""
@@ -495,6 +515,10 @@ class SemanticAnalyzer:
             return True
         
         return False
+    
+    def get_log(self):
+        """Obtiene el registro completo de estados como un string."""
+        return "\n".join(self.log)
 
     def get_errors(self):
         """Get all semantic errors."""

@@ -151,7 +151,7 @@ def ejecucion(e, page: ft.Page):
     #Semantic Analyzer
     semantic = SemanticAnalyzer()
     semantic.analyze(ast)
-    semantic_errors = f"Se encontraron {len(semantic.get_errors())} errores semánticos"
+    semantic_errors = f"Se encontraron {len(semantic.get_errors())} errores semánticos: \n {semantic.get_errors()} \n\n Logs: \n {semantic.get_log()}"
     e.control.parent.parent.controls[1].controls[3].value = semantic_errors
     e.control.parent.parent.controls[1].controls[3].update()
 
