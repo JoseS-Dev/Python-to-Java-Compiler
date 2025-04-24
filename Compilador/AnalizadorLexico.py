@@ -170,7 +170,7 @@ def t_error(t):
 
 lexer = Lex.lex()
 def main():
-    with open('Testeos/Test-1.java', 'r') as file:
+    with open('Test/Test-3.java', 'r') as file:
         data = file.read()
         print('Codigo fuente: \n', data)
         lexer.input(data)

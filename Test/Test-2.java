@@ -1,20 +1,26 @@
- public static void main(String[] args) {
-        double contador = 1.1;
-        String[] nomes = { "if", "else", "for", "while", "switch", "case", "break", "continue" };
-        int a = 5;
-        int b = 10;
-        int resultadoSoma = a + b;
-        int resultadoSubtracao = a - b;
-        int resultadoMultiplicacao = a * b;
-        int resultadoDivisao = a / b;
-        boolean condicao = true;
-        while (condicao) {
-            a=1;
+public class TestSemantico {
+    // 1. Atributo privado
+    private String nombre;
+    
+    
+    
+    // 3. Método público
+    public String saludar(String saludo) {
+        // 4. Variable local
+        String mensaje = saludo + " " + nombre;
+        
+        // 5. Condicional
+        if (nombre.equals("Juan")) {
+            mensaje += " (especial)";
+        } else {
+            mensaje += " (normal)";
         }
         
-        System.out.println("Palavras-chave:");
-
-        System.out.println("\nOperadores e Variáveis:");
-        System.out.println("Soma: " + resultadoSoma); 
+        // 6. Bucle for
+        for (int i = 0; i < 3; i++) {
+            System.out.println(mensaje);
+        }
         
+        return mensaje; // Faltaba el return
     }
+}

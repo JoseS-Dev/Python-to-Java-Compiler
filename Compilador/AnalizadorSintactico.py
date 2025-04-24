@@ -644,7 +644,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         filename = sys.argv[1]
     else:
-        filename = 'Testeos/Test-1.java'
+        filename = 'Test/Test-3.java'
     
     try:
         with open(filename, 'r') as f:
